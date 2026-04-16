@@ -174,7 +174,7 @@ def export_to_server(data, location_name):
     Sends the collected metrics to the FastAPI central server.
     """
     # Replace with your actual server URL (e.g., your PythonAnywhere or Pi address)
-    URL = "http://your-server-address.com/log-wifi"
+    URL = "http://10.134.191.166:8000/log-wifi" # Aleco’s Mac IP address for home wifi
 
     payload = {
         "location": location_name,
