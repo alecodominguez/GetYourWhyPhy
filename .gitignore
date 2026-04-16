@@ -1,0 +1,10 @@
+# Ignore the virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Ignore the local database
+*.db
+
+# Ignore Mac system files
+.DS_Store
