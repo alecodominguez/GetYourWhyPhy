@@ -172,8 +172,7 @@ def export_to_server(data, location_name):
 		Sends the collected metrics to the FastAPI central server.
 	"""
 	# Replace with your actual server URL (e.g., your PythonAnywhere or Pi address)
-	URL = "https://opacity-cadillac-emporium.ngrok-free.dev:8000/log-wifi" # Aleco’s Mac IP address for home wifi
-
+	URL = "https://opacity-cadillac-emporium.ngrok-free.dev/log-wifi"
 	payload = {
 		"location": location_name,
 		"download": data["download"],
@@ -185,8 +184,9 @@ def export_to_server(data, location_name):
 		"ssid": data["ssid"]
 	}
 
+	headers = {"ngrok-skip-browser-warning": "true"}
+
 	try:
-		headers = {"ngrok-skip-browser-warning": "69420"}
 		response = requests.post(URL, json=payload, timeout=10)
 		if response.status_code == 200:
 			print(f"\n[✓] Data successfully synced to central database.")
@@ -225,7 +225,28 @@ def main():
 	letter, label = grade(total)
 
 # 4. Final Report Output
-	print(f"\nOVERALL SCORE: {total}/100 [{letter}] - {label}")
+	SEP = "═" * 58
+	print(f"\n{SEP}\n  DETAILED NETWORK REPORT\n{SEP}")
+
+# This dictionary maps your raw keys to human-readable names and units
+	display_labels = {
+		"download":    ("Download Speed",  f"{download} Mbps"),
+		"upload":      ("Upload Speed",    f"{upload} Mbps"),
+		"latency":     ("Latency (Ping)",  f"{latency} ms"),
+		"jitter":      ("Jitter",          f"{jitter} ms"),
+		"packet_loss": ("Packet Loss",     f"{packet_loss}%"),
+	}
+
+# The loop that brings back the [███░░] bars
+	for metric, (name, measured) in display_labels.items():
+		s = sub_scores[metric]
+		w = WEIGHTS[metric]
+		print(f"  {name:<18} {measured:>12}   [{bar(s, 20)}] {s:5.1f}/100  (weight {w}%)")
+
+	print(SEP)
+	print(f"  OVERALL SCORE: {total}/100 [{letter}] - {label}")
+	print(f"  {bar(total, 50)}")
+	print(SEP)
 
 # 5. NEW: Export Step
 	export_data = raw_data.copy()
