@@ -18,7 +18,7 @@ pip install requests speedtest-cli psutil
 ### 2. Run the Collection Script
 Execute the script and enter your current building or campus location when prompted:
 ```bash
-python WiFi.py
+python WhyPhy.py
 ```
 *You get to know your WiFi rating plus tips in exchange for your WiFi speed data*
 

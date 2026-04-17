@@ -6,6 +6,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
 from datetime import datetime, timezone
+from fastapi.staticfiles import StaticFiles # Allows to add download button to index.html
+import os
+
+# Create the directory if it doesn't exist so the server doesn't crash
+if not os.path.exists("downloads"):
+    os.makedirs("downloads")
 
 # 1. Database Configuration
 DATABASE_URL = "sqlite:///./campus_wifi.db"
@@ -31,6 +37,7 @@ Base.metadata.create_all(bind=engine)
 
 # 3. FastAPI App Initialization
 app = FastAPI()
+app.mount("/static-downloads", StaticFiles(directory="downloads"), name="downloads") # call to executable
 templates = Jinja2Templates(directory="templates") # call to index.html
 
 class WiFiData(BaseModel):
