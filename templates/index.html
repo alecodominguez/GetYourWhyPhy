@@ -1,39 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GetYourWhyPhy | Leaderboard</title>
+    <title>GetYourWhyPhy Leaderboard</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; padding: 40px; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #003366; text-align: center; } /* UA Blue */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #AB0520; } /* UA Red */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #003366; color: white; }
-        .score-pill { padding: 5px 10px; border-radius: 15px; font-weight: bold; color: white; }
+        th { background-color: #0C234B; color: white; } /* UA Blue */
+        .score { font-weight: bold; color: #2ecc71; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📊 Campus WiFi Leaderboard</h1>
-        <p>Real-time network rankings for the University of Arizona.</p>
+    <div class="card">
+        <h1>📶 GetYourWhyPhy: Campus Leaderboard</h1>
+        <p>Recent WiFi performance reports from across the University of Arizona.</p>
         
         <table>
-            <tr>
-                <th>Building</th>
-                <th>Avg Score</th>
-                <th>Reports</th>
-            </tr>
-            {% for row in leaderboard %}
-            <tr>
-                <td>{{ row[0] }}</td>
-                <td>
-                    <span class="score-pill" style="background: {{ 'green' if row[1] >= 80 else '#d4a017' if row[1] >= 60 else 'red' }}">
-                        {{ row[1]|round(1) }}
-                    </span>
-                </td>
-                <td>{{ row[2] }}</td>
-            </tr>
-            {% endfor %}
+            <thead>
+                <tr>
+                    <th>Location</th>
+                    <th>Network (SSID)</th>
+                    <th>Download</th>
+                    <th>Score</th>
+                    <th>Time (UTC)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.location }}</td>
+                    <td>{{ log.ssid }}</td>
+                    <td>{{ log.download }} Mbps</td>
+                    <td class="score">{{ log.score }}/100</td>
+                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 </body>

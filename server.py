@@ -59,9 +59,6 @@ def home(request: Request):
         	# This query gets all logs, sorted by the newest first
         	logs = db.query(WiFiLog).order_by(desc(WiFiLog.timestamp)).all()
         
-        	return templates.TemplateResponse("index.html", {
-            		"request": request, 
-            		"logs": logs
-        	})
+        	return templates.TemplateResponse("index.html", {"request": request, "logs": logs})
     	finally:
         	db.close()
