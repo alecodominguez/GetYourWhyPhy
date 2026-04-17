@@ -15,17 +15,17 @@ Base = declarative_base()
 
 # 2. Database Model
 class WiFiLog(Base):
-	__tablename__ = "wifi_logs"
-	id = Column(Integer, primary_key=True, index=True)
-	location = Column(String)
-	ssid = Column(String)
-	download = Column(Float)
-	upload = Column(Float)
-	latency = Column(Float)
-	jitter = Column(Float)
-	packet_loss = Column(Float)
-	score = Column(Float)
-	timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    __tablename__ = "wifi_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    location = Column(String)
+    ssid = Column(String)
+    download = Column(Float)
+    upload = Column(Float)
+    latency = Column(Float)
+    jitter = Column(Float)
+    packet_loss = Column(Float)
+    score = Column(Float)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 Base.metadata.create_all(bind=engine)
 
@@ -34,31 +34,31 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates") # call to index.html
 
 class WiFiData(BaseModel):
-	location: str
-	download: float
-	upload: float
-	latency: float
-	jitter: float
-	packet_loss: float
-	score: float
-	ssid: str
+    location: str
+    download: float
+    upload: float
+    latency: float
+    jitter: float
+    packet_loss: float
+    score: float
+    ssid: str
 
 @app.post("/log-wifi")
 def log_wifi(data: WiFiData):
-	db = SessionLocal()
-	new_entry = WiFiLog(**data.dict())
-	db.add(new_entry)
-	db.commit()
-	db.close()
-	return {"status": "success"}
+    db = SessionLocal()
+    new_entry = WiFiLog(**data.dict())
+    db.add(new_entry)
+    db.commit()
+    db.close()
+    return {"status": "success"}
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-	db = SessionLocal()
-    	try:
-        	# This query gets all logs, sorted by the newest first
-        	logs = db.query(WiFiLog).order_by(desc(WiFiLog.timestamp)).all()
+    db = SessionLocal()
+    try:
+        # This query gets all logs, sorted by the newest first
+        logs = db.query(WiFiLog).order_by(desc(WiFiLog.timestamp)).all()
         
-        	return templates.TemplateResponse("index.html", {"request": request, "logs": logs})
-    	finally:
-        	db.close()
+        return templates.TemplateResponse("index.html", {"request": request, "logs": logs})
+    finally:
+        db.close()
