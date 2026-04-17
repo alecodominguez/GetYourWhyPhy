@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GetYourWhyPhy | Leaderboard</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 40px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #003366; text-align: center; } /* UA Blue */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #003366; color: white; }
+        .score-pill { padding: 5px 10px; border-radius: 15px; font-weight: bold; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Campus WiFi Leaderboard</h1>
+        <p>Real-time network rankings for the University of Arizona.</p>
+        
+        <table>
+            <tr>
+                <th>Building</th>
+                <th>Avg Score</th>
+                <th>Reports</th>
+            </tr>
+            {% for row in leaderboard %}
+            <tr>
+                <td>{{ row[0] }}</td>
+                <td>
+                    <span class="score-pill" style="background: {{ 'green' if row[1] >= 80 else '#d4a017' if row[1] >= 60 else 'red' }}">
+                        {{ row[1]|round(1) }}
+                    </span>
+                </td>
+                <td>{{ row[2] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
