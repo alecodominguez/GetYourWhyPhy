@@ -1,58 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>GetYourWhyPhy Leaderboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background: #f0f2f5; }
+        body { font-family: 'Montserrat', sans-serif; margin: 40px; background: #f0f2f5; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #AB0520; } /* UA Red */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #locationSearch { width: 100%; padding: 12px; margin: 20px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #0C234B; color: white; } /* UA Blue */
-        .score { font-weight: bold; color: #2ecc71; }
+        tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        td:first-child { font-weight: bold; color: #2d2d2d; }
+        .badge { padding: 6px 12px; border-radius: 12px; font-weight: 600; font-size: 0.85rem; color: white; display: inline-block; min-width: 60px; text-align: center; }
+        .status-fast { background-color: #28a745; }
+        .status-average { background-color: #ffc107; color: #212529; }
+        .status-slow { background-color: #dc3545; }
+        .btn { text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
     <div class="card">
         <div style="text-align: center; margin-bottom: 30px; padding: 20px; border: 2px dashed #0C234B; border-radius: 10px;">
             <h3>Want to contribute?</h3>
-            <p>1. Download on your laptop</p>
-            <p>2. Open the file</p>
-            <p>3. Enter your building</p>
-            <h3>Simple</h3>
-            <a href="/static-downloads/WhyPhy.zip" download="WhyPhy.zip"
-               style="background-color: #AB0520; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                Get WhyPhy
-            </a>
-            <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+            <p>Download the tool on your PC, enter your building, and help map the UofA!</p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                <a href="/downloads/WhyPhy.zip" download class="btn" style="background-color: #AB0520; color: white; padding: 12px 25px;">
+                    Get WhyPhy for macOS
+                </a>
+                <a href="/downloads/WhyPhy_Win.zip" download class="btn" style="background-color: #0C234B; color: white; padding: 12px 25px;">
+                    Get WhyPhy for Windows
+                </a>
+            </div>
+            <p style="font-size: 0.8em; color: #666; margin-top: 15px;">
                 Note: You may get a warning when trying to open (macOS). Go to System Settings > Security & Privacy > scroll all the way down and click "Open Anyway".
             </p>
+            <p style="font-size: 1.0em; color: #000000; margin-top: 15px;">
+                Learn more and download the source code from our <a href="https://github.com/alecodominguez/GetYourWhyPhy">GitHub</a> Repository.
+            </p>
         </div>
-        <h1> UofA WhyPhy Leaderboard</h1>
-        <p>Recent WiFi performance reports from across the UofA so you can find the best spot to ace these last few weeks of school ;)</p>
-        
+
+        <h1>UofA WhyPhy Leaderboard</h1>
+        <input type="text" id="locationSearch" onkeyup="filterTable()" placeholder="Search for a building (e.g., Gould-Simpson)...">
+
         <table>
             <thead>
                 <tr>
                     <th>Location</th>
-                    <th>Network (SSID)</th>
                     <th>Download</th>
+                    <th>Upload</th>
+                    <th>Latency</th>
                     <th>Score</th>
-                    <th>Time (UTC)</th>
+                    <th>Reported</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
                 <tr>
                     <td>{{ log.location }}</td>
-                    <td>{{ log.ssid }}</td>
                     <td>{{ log.download }} Mbps</td>
-                    <td class="score">{{ log.score }}/100</td>
-                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ log.upload }} Mbps</td>
+                    <td>{{ log.latency }} ms</td>
+                    <td>
+                        <span class="badge {% if log.score >= 80 %}status-fast{% elif log.score >= 50 %}status-average{% else %}status-slow{% endif %}">
+                            {{ log.score }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="time-ago" data-timestamp="{{ log.timestamp.isoformat() if log.timestamp else '' }}">
+                            {{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp else 'N/A' }}
+                        </span>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <script src="/static/script.js"></script>
 </body>
 </html>

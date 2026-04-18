@@ -9,9 +9,10 @@ from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles # Allows to add download button to index.html
 import os
 
-# Create the directory if it doesn't exist so the server doesn't crash
-if not os.path.exists("downloads"):
-    os.makedirs("downloads")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+static_path = os.path.join(BASE_DIR, "static")
+downloads_path = os.path.join(BASE_DIR, "downloads")
+templates_path = os.path.join(BASE_DIR, "templates")
 
 # 1. Database Configuration
 DATABASE_URL = "sqlite:///./campus_wifi.db"
@@ -37,8 +38,9 @@ Base.metadata.create_all(bind=engine)
 
 # 3. FastAPI App Initialization
 app = FastAPI()
-app.mount("/static-downloads", StaticFiles(directory="downloads"), name="downloads") # call to executable
-templates = Jinja2Templates(directory="templates") # call to index.html
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+app.mount("/downloads", StaticFiles(directory=downloads_path), name="downloads")
+templates = Jinja2Templates(directory=templates_path)
 
 class WiFiData(BaseModel):
     location: str
