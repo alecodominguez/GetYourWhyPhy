@@ -206,7 +206,7 @@ def export_to_server(data, location_name):
     headers = {"ngrok-skip-browser-warning": "true"}
 
     try:
-        response = requests.post(URL, json=payload, timeout=10)
+        response = requests.post(URL, json=payload, headers=headers, timeout=10)
         if response.status_code == 200:
             print(f"\n[✓] Data successfully synced to central database.")
         else:
