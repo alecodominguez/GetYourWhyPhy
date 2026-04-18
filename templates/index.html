@@ -8,9 +8,7 @@
         body { font-family: 'Montserrat', sans-serif; margin: 40px; background: #f0f2f5; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #AB0520; } /* UA Red */
-        .subtitle { color: #4a4a4a; font-size: 1.1rem; margin-bottom: 25px; line-height: 1.5;}
-        /* This hides the label from the eyes but keeps it for screen readers */
-        .visually-hidden {position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;}
+        .subtitle { font-weight: bold; color: #000000; font-size: 1.1rem; margin-bottom: 25px; line-height: 1.5;}
         #locationSearch { width: 100%; padding: 12px; margin: 20px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
@@ -28,7 +26,7 @@
 <body>
     <div class="card">
         <div style="text-align: center; margin-bottom: 30px; padding: 20px; border: 2px dashed #0C234B; border-radius: 10px;">
-            <h3>Want to contribute?</h3>
+            <h3>Want to contribute? Submit a WhyPhy report:</h3>
             <p>Download the tool on your PC, enter your building, and help map the UofA!</p>
             <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
                 <a href="/downloads/WhyPhy.zip" download class="btn" style="background-color: #AB0520; color: white; padding: 12px 25px;">
@@ -47,9 +45,9 @@
         </div>
 
         <h1>UofA WhyPhy Leaderboard</h1>
-        <p class="subtitle">Recent WiFi performance reports from across the UofA so you can find the best spot to ace these last few weeks of school ;)</p>
-        <label for="locationSearch" class="visually-hidden">Search for a building</label>
-        <input type="text" id="locationSearch" ... >
+        <p class="subtitle">A place to see recent WiFi performance reports from across the UofA so you can find the best spot to ace these last few weeks of school ;)</p>
+        <label for="locationSearch">Find a Study Spot:</label>
+        <input type="text" id="locationSearch" onkeyup="filterTable()" placeholder="Search for a location...">
 
         <table>
             <thead>
@@ -58,7 +56,7 @@
                     <th>Download</th>
                     <th>Upload</th>
                     <th>Latency</th>
-                    <th>Score</th>
+                    <th>WhyPhy Score</th>
                     <th>Reported</th>
                 </tr>
             </thead>
@@ -76,7 +74,7 @@
                     </td>
                     <td>
                         <span class="time-ago" data-timestamp="{{ log.timestamp.isoformat() if log.timestamp else '' }}">
-                            {{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp else 'N/A' }}
+                            {{ log.timestamp }}
                         </span>
                     </td>
                 </tr>

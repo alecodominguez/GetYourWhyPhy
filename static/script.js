@@ -19,23 +19,21 @@ function updateTime() {
     const now = new Date();
 
     elements.forEach(el => {
-        const timestampStr = el.getAttribute('data-timestamp');
-        if (!timestampStr) return;
+        const timestamp = el.getAttribute('data-timestamp');
+        // checks the timestamp is parsed correctly
+        const recordDate = new Date(timestamp);
+        const diff = Math.floor((now - recordDate) / 1000);
 
-        const recordTime = new Date(timestampStr);
-        const diffInSeconds = Math.floor((now - recordTime) / 1000);
+        if (isNaN(diff)) return; // is skipped if date is invalid
 
-        let timeText = "";
-        if (diffInSeconds < 60) timeText = "Just now";
-        else if (diffInSeconds < 3600) timeText = Math.floor(diffInSeconds / 60) + "m ago";
-        else if (diffInSeconds < 86400) timeText = Math.floor(diffInSeconds / 3600) + "h ago";
-        else timeText = Math.floor(diffInSeconds / 86400) + "d ago";
-
-        el.innerText = timeText;
+        if (diff < 60) el.innerText = "Just now";
+        else if (diff < 3600) el.innerText = Math.floor(diff / 60) + "m ago";
+        else if (diff < 86400) el.innerText = Math.floor(diff / 3600) + "h ago";
+        else el.innerText = Math.floor(diff / 86400) + "d ago";
     });
 }
 
-// Initial run and every minute update
+// 1st run and every minute update
 document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 60000);

@@ -199,7 +199,7 @@ def export_to_server(data, location_name):
         "latency": data["latency"],
         "jitter": data["jitter"],
         "packet_loss": data["packet_loss"],
-        "score": data["total_score"],
+        "score": data["score"],
         "ssid": data["ssid"]
     }
 
@@ -269,7 +269,7 @@ def main():
 
 # 5. NEW: Export Step
     export_data = raw_data.copy()
-    export_data["total_score"] = total
+    export_data["score"] = total
     export_data["ssid"] = ssid
 
     export_to_server(export_data, location_name)
