@@ -147,18 +147,32 @@ def get_signal_info():
                 if "Signal" in line:
                     signal = line.split(":")[1].strip()  # Returns percentage (e.g. 90%)
 
-        elif os_name == "Darwin":
-            # macOS: uses 'wdutil' (Best for modern macOS)
-            # IMPORTANT: Requires Location Services enabled for Terminal/PyCharm
-            cmd = "/usr/sbin/wdutil info"
-            output = subprocess.check_output(cmd, shell=True).decode()
 
-            for line in output.split('\n'):
-                if "SSID" in line and ":" in line:
-                    ssid = line.split(":")[1].strip()
-                if "RSSI" in line and ":" in line:
-                    # Signal is usually RSSI (e.g., -60 dBm)
-                    signal = line.split(":")[1].strip() + " dBm"
+
+        elif os_name == "Darwin":
+            try:
+                cmd = "/usr/sbin/system_profiler SPAirPortDataType"
+                output = subprocess.check_output(cmd, shell=True).decode()
+                lines = [line.strip() for line in output.split('\n') if line.strip()]
+                for i in range(len(lines)):
+                    # 1. Improved SSID Parsing
+                    # 'Current Network Information:' is the parent label.
+                    # The very next line in system_profiler is usually the SSID itself.
+                    if "Current Network Information:" in lines[i]:
+                        if i + 1 < len(lines):
+                            # The SSID usually ends in a colon in the profiler; we remove it
+                            potential_ssid = lines[i + 1].replace(":", "").strip()
+                            if "Network Type" not in potential_ssid:
+                                ssid = potential_ssid
+                    # 2. Signal to Percentage Math
+                    if "Signal / Noise:" in lines[i]:
+                        raw_dbm = lines[i].split(":")[1].split("/")[0].strip().replace(" dBm", "")
+                        dbm_int = int(raw_dbm)
+                        # Linear mapping: -50dBm (100%) to -100dBm (0%)
+                        quality = max(0, min(100, 2 * (dbm_int + 100)))
+                        signal = f"{quality}%"
+            except Exception as e:
+                pass
 
         elif os_name == "Linux":
             # Linux: uses 'nmcli' (Network Manager)
@@ -234,7 +248,10 @@ def export_to_server(data, location_name):
 def main():
     # 1. Initialization and Signal Check
     ssid, signal = get_signal_info()
-    print(f"Network: {ssid} | Signal: {signal}")
+    print("-" * 30)
+    print(f"Connected to: {ssid}")
+    print(f"Signal Strength: {signal}")
+    print("-" * 30)
 
     # NEW: Ask the user where they are so the data is labeled for ML
     location_name = input("Enter your current building/location: ").strip()
@@ -289,6 +306,7 @@ def main():
     export_data["ssid"] = ssid
 
     export_to_server(export_data, location_name)
+
 
 if __name__ == "__main__":
     main()
