@@ -18,7 +18,7 @@ downloads_path = os.path.join(BASE_DIR, "downloads")
 templates_path = os.path.join(BASE_DIR, "templates")
 
 # Database Configuration
-DATABASE_URL = "sqlite:///./campus_wifi.db"
+DATABASE_URL = "sqlite:///./data/campus_wifi.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
