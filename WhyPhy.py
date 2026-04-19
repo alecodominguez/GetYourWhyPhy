@@ -8,12 +8,12 @@ requirements (install via conda/pip):
     - - - MAKE SURE YOU ARE IN THE FOLDER WITH Wifi.py - - -
 """
 import requests  # needed to "push" data collected to database
-import time # this is used to time how long the speed test takes
-import socket # low-level networking (imported but available for future use maybe)
-import subprocess # lets us run terminal commands like "ping" from within Python
-import platform # detects the OS (Windows / macOS / Linux) so we use the right commands
-import psutil # reads system info like network stats (this has to be installed separately)
-import datetime # gives each run a specific date
+import time  # this is used to time how long the speed test takes
+import socket  # low-level networking (imported but available for future use maybe)
+import subprocess  # lets us run terminal commands like "ping" from within Python
+import platform  # detects the OS (Windows / macOS / Linux) so we use the right commands
+import psutil  # reads system info like network stats (this has to be installed separately)
+import datetime  # gives each run a specific date
 import re
 
 # DEPENDENCY CHECK
@@ -21,17 +21,18 @@ import re
 try:
     import speedtest
 except ImportError:
-    print("Missing dependency. Install it with: pip install speedtest-cli or conda install -c conda-forge speedtest-cli psutil")
+    print(
+        "Missing dependency. Install it with: pip install speedtest-cli or conda install -c conda-forge speedtest-cli psutil")
     raise SystemExit(1)
 
 # SCORING CONFIGURATION
 # These weights determine how much each metric affects the final 0–100 linear score.
 # We focus on Download and Latency
 WEIGHTS = {
-    "download": 35,    # Mbps
-    "upload": 20,      # Mbps
-    "latency": 30,     # ms (Lower is better)
-    "jitter": 10,      # ms (Consistency)
+    "download": 35,  # Mbps
+    "upload": 20,  # Mbps
+    "latency": 30,  # ms (Lower is better)
+    "jitter": 10,  # ms (Consistency)
     "packet_loss": 5,  # %  (Reliability)
 }
 
@@ -45,10 +46,12 @@ THRESHOLDS = {
     "packet_loss": (100, 0),
 }
 
+
 # MATHEMATICAL HELPERS
 def clamp(val, lo, hi):
     """Ensures a number stays within a specific range (eg. prevents a score of 110/100)."""
     return max(lo, min(hi, val))
+
 
 def score_metric(value, lo, hi):
     """ Linearly maps a raw measurement to a 0–100 scale. Formula: ((Value - Floor) / (Range)) * 100"""
@@ -56,6 +59,7 @@ def score_metric(value, lo, hi):
         return 0
     ratio = (value - lo) / (hi - lo)
     return round(clamp(ratio * 100, 0, 100), 1)
+
 
 # NETWORK MEASUREMENT FUNCTIONS
 def measure_speed():
@@ -67,6 +71,7 @@ def measure_speed():
     ul = st.upload() / 1_000_000
     latency = st.results.ping
     return round(dl, 2), round(ul, 2), round(latency, 2)
+
 
 def measure_jitter(host="8.8.8.8", count=10):
     """
@@ -101,6 +106,7 @@ def measure_jitter(host="8.8.8.8", count=10):
         return round(variance ** 0.5, 2)
     except Exception:
         return 0.0
+
 
 def measure_packet_loss(host="8.8.8.8", count=20):
     """Runs a longer ping test to see if any data packets were dropped entirely."""
@@ -171,20 +177,23 @@ def get_signal_info():
 
     return ssid, signal
 
+
 # UI / FORMATTIng
 def bar(score, width=30):
     """Generates a visual progress bar: [████░░░]"""
     filled = int(clamp(score, 0, 100) / 100 * width)
     return "█" * filled + "░" * (width - filled)
 
+
 def grade(score):
     """Maps the 0-100 numerical score to a traditional letter grade."""
     if score >= 90: return "A+", "Excellent"
-    if score >= 80: return "A",  "Great"
-    if score >= 70: return "B",  "Good"
-    if score >= 60: return "C",  "Fair"
-    if score >= 45: return "D",  "Poor"
+    if score >= 80: return "A", "Great"
+    if score >= 70: return "B", "Good"
+    if score >= 60: return "C", "Fair"
+    if score >= 45: return "D", "Poor"
     return "F", "Very Poor"
+
 
 def export_to_server(data, location_name):
     """
@@ -207,23 +216,30 @@ def export_to_server(data, location_name):
 
     try:
         response = requests.post(URL, json=payload, headers=headers, timeout=10)
-        if response.status_code == 200:
+        # Parse the JSON response from your FastAPI server
+        server_response = response.json()
+        if response.status_code == 200 and server_response.get("status") == "success":
             print(f"\n[✓] Data successfully synced to central database.")
+        elif server_response.get("status") == "error":
+            # catches the "Invalid Location" message from server function log_WiFi
+            print(f"\n[!] Rejected: {server_response.get('message')}")
         else:
             print(f"\n[!] Server error: {response.status_code}")
+
     except requests.exceptions.RequestException as e:
         print(f"\n[!] Connection failed: Could not reach the server.")
 
+
 # MAIN EXECUTION
 def main():
-# 1. Initialization and Signal Check
+    # 1. Initialization and Signal Check
     ssid, signal = get_signal_info()
     print(f"Network: {ssid} | Signal: {signal}")
 
-# NEW: Ask the user where they are so the data is labeled for ML
+    # NEW: Ask the user where they are so the data is labeled for ML
     location_name = input("Enter your current building/location: ").strip()
 
-# 2. Data Gathering
+    # 2. Data Gathering
     print("[1/3] Speed Test...")
     download, upload, latency = measure_speed()
 
@@ -233,7 +249,7 @@ def main():
     print("[3/3] Packet Loss...")
     packet_loss = measure_packet_loss()
 
-# 3. Scoring Logic
+    # 3. Scoring Logic
     raw_data = {
         "download": download, "upload": upload,
         "latency": latency, "jitter": jitter, "packet_loss": packet_loss
@@ -243,20 +259,20 @@ def main():
     total = round(sum(sub_scores[m] * WEIGHTS[m] / 100 for m in WEIGHTS), 1)
     letter, label = grade(total)
 
-# 4. Final Report Output
+    # 4. Final Report Output
     SEP = "═" * 58
     print(f"\n{SEP}\n  DETAILED NETWORK REPORT\n{SEP}")
 
-# This dictionary maps your raw keys to human-readable names and units
+    # This dictionary maps your raw keys to human-readable names and units
     display_labels = {
-        "download":    ("Download Speed",  f"{download} Mbps"),
-        "upload":      ("Upload Speed",    f"{upload} Mbps"),
-        "latency":     ("Latency (Ping)",  f"{latency} ms"),
-        "jitter":      ("Jitter",          f"{jitter} ms"),
-        "packet_loss": ("Packet Loss",     f"{packet_loss}%"),
+        "download": ("Download Speed", f"{download} Mbps"),
+        "upload": ("Upload Speed", f"{upload} Mbps"),
+        "latency": ("Latency (Ping)", f"{latency} ms"),
+        "jitter": ("Jitter", f"{jitter} ms"),
+        "packet_loss": ("Packet Loss", f"{packet_loss}%"),
     }
 
-# The loop that brings back the [███░░] bars
+    # The loop that brings back the [███░░] bars
     for metric, (name, measured) in display_labels.items():
         s = sub_scores[metric]
         w = WEIGHTS[metric]
@@ -267,7 +283,7 @@ def main():
     print(f"  {bar(total, 50)}")
     print(SEP)
 
-# 5. NEW: Export Step
+    # 5. NEW: Export Step
     export_data = raw_data.copy()
     export_data["score"] = total
     export_data["ssid"] = ssid

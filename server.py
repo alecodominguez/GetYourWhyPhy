@@ -4,9 +4,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func  # import to get building longitudinal data
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from fastapi.staticfiles import StaticFiles # Allows to add download button to index.html
+from fastapi.staticfiles import StaticFiles  # Allows to add download button to index.html
+from locations import is_valid_location  # function call to prevent non-campus data
+from locations import CAMPUS_BUILDINGS  # getter to foreard the info to the html
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,13 +17,14 @@ static_path = os.path.join(BASE_DIR, "static")
 downloads_path = os.path.join(BASE_DIR, "downloads")
 templates_path = os.path.join(BASE_DIR, "templates")
 
-# 1. Database Configuration
+# Database Configuration
 DATABASE_URL = "sqlite:///./campus_wifi.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 2. Database Model
+
+# Database Model
 class WiFiLog(Base):
     __tablename__ = "wifi_logs"
     id = Column(Integer, primary_key=True, index=True)
@@ -34,13 +38,15 @@ class WiFiLog(Base):
     score = Column(Float)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+
 Base.metadata.create_all(bind=engine)
 
-# 3. FastAPI App Initialization
+# FastAPI App Initialization
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 app.mount("/downloads", StaticFiles(directory=downloads_path), name="downloads")
 templates = Jinja2Templates(directory=templates_path)
+
 
 class WiFiData(BaseModel):
     location: str
@@ -52,23 +58,48 @@ class WiFiData(BaseModel):
     score: float
     ssid: str
 
+
 @app.post("/log-wifi")
 def log_wifi(data: WiFiData):
+    # disregards non-campus locations
+    if not is_valid_location(data.location):
+        print(f"REJECTED: {data.location} is not on campus.")
+        return {"status": "error", "message": f"'{data.location}' is not a recognized UofA building."}
+
     db = SessionLocal()
-    new_entry = WiFiLog(**data.dict())
-    db.add(new_entry)
-    db.commit()
-    db.close()
-    return {"status": "success"}
+    try:
+        # save logic for a post after checking location is valid
+        new_entry = WiFiLog(**data.model_dump())
+        db.add(new_entry)
+        db.commit()
+        return {"status": "success"}
+    finally:
+        db.close()
+
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     db = SessionLocal()
     try:
-        # This query gets all logs, sorted by the newest first
-        logs = db.query(WiFiLog).order_by(desc(WiFiLog.timestamp)).all()
+        # Gets the last 20 raw logs for the "Recent Activity" table
+        logs = db.query(WiFiLog).order_by(desc(WiFiLog.timestamp)).limit(20).all()
+
+        # Calculate averages for the "Building Leaderboard"
+        # Group by 'location' and average the 'score'
+        building_stats = db.query(
+            WiFiLog.location,
+            func.avg(WiFiLog.score).label('avg_score'),
+            func.count(WiFiLog.location).label('test_count')
+        ).group_by(WiFiLog.location).order_by(desc('avg_score')).all()
+
         return templates.TemplateResponse(
-            request=request, name="index.html", context={"logs": logs}
+            request=request,  # Pass request as its own argument
+            name="index.html",
+            context={
+                "logs": logs,
+                "building_stats": building_stats,
+                "buildings": sorted(CAMPUS_BUILDINGS)
+            }
         )
     finally:
         db.close()
