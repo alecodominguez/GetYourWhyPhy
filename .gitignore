@@ -1,16 +1,6 @@
-# Ignore the virtual environment
-venv/
+.venv/
 __pycache__/
-*.pyc
-
-# Ignore the local database
 *.db
-
-# Ignore Mac system files
-.DS_Store
-
+*.spec
 build/
 dist/
-*.spec
-venv/
-__pycache__/
