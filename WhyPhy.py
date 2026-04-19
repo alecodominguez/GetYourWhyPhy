@@ -307,6 +307,8 @@ def main():
 
     export_to_server(export_data, location_name)
 
+    # keeps terminal open so user can view personalized report
+    input("\nPress Enter to close this window...")
 
 if __name__ == "__main__":
     main()
