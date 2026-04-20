@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, desc
@@ -8,8 +8,8 @@ from sqlalchemy import func  # import to get building longitudinal data
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles  # Allows to add download button to index.html
-from locations import is_valid_location  # function call to prevent non-campus data
 from locations import CAMPUS_BUILDINGS  # getter to foreard the info to the html
+from locations import get_standard_name #  function call to prevent non-campus data
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,24 +58,29 @@ class WiFiData(BaseModel):
     score: float
     ssid: str
 
-
 @app.post("/log-wifi")
 def log_wifi(data: WiFiData):
-    # disregards non-campus locations
-    if not is_valid_location(data.location):
-        print(f"REJECTED: {data.location} is not on campus.")
-        return {"status": "error", "message": f"'{data.location}' is not a recognized UofA building."}
+    # 1. Normalize and Validate the location
+    standard_name = get_standard_name(data.location)
+
+    if not standard_name:
+        raise HTTPException(status_code=400, detail=f"'{data.location}' is not a recognized UofA building.")
 
     db = SessionLocal()
     try:
-        # save logic for a post after checking location is valid
-        new_entry = WiFiLog(**data.model_dump())
+        # 2. Create the entry, but explicitly OVERWRITE the location with the standard name
+        log_entry_data = data.model_dump()
+        log_entry_data["location"] = standard_name
+
+        new_entry = WiFiLog(**log_entry_data)
         db.add(new_entry)
         db.commit()
-        return {"status": "success"}
+        return {"status": "success", "recorded_as": standard_name}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
-
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):

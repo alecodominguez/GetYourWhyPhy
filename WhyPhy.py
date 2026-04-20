@@ -15,6 +15,7 @@ import platform  # detects the OS (Windows / macOS / Linux) so we use the right 
 import psutil  # reads system info like network stats (this has to be installed separately)
 import datetime  # gives each run a specific date
 import re
+import locations  # Verify the location is on campus
 
 # DEPENDENCY CHECK
 # Speedtest is a third-party library; we catch the error to help the user install it.
@@ -300,12 +301,16 @@ def main():
     print(f"  {bar(total, 50)}")
     print(SEP)
 
-    # 5. NEW: Export Step
-    export_data = raw_data.copy()
-    export_data["score"] = total
-    export_data["ssid"] = ssid
+    matched_building = locations.get_standard_name(location_name)
 
-    export_to_server(export_data, location_name)
+    if matched_building:
+        # If found, use the matched_building (e.g., "Student Recreation Center")
+        # export Step
+        export_data = raw_data.copy()
+        export_data["score"] = total
+        export_data["ssid"] = ssid
+
+        export_to_server(export_data, matched_building)
 
     # keeps terminal open so user can view personalized report
     input("\nPress Enter to close this window...")
