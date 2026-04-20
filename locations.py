@@ -22,7 +22,7 @@ CAMPUS_BUILDINGS = [
     "McClelland", "McClelland Park", "McKale Memorial Center",
     "Medical Research", "Meinel", "Mines & Metallurgy", "Mirror Lab",
     "Modern Languages", "Mohave", "Music", "Navajo", "Nugent", "Nursing",
-    "Old Main", "Pacheco ILC", "Park Ave. Garage", "PSU", "PAS",
+    "Old Main", "Pacheco ILC", "Park Ave. Garage", "PSU", "PAS", "C.A.T.S.",
     "Pharmacy", "Pima", "Pinal", "Police", "Psychology", "Pueblo de la Cienega",
     "RLAS", "Robson Tennis Center", "Saguaro", "Sancet Stadium", "Santa Cruz",
     "SALT Center", "Schaefer", "Shantz", "Sierra", "Sixth St. Garage",
@@ -30,7 +30,8 @@ CAMPUS_BUILDINGS = [
     "Social Sciences", "Sonora", "Steward Observatory", "Student Recreation Center",
     "North REC", "Honors", "Cactus Grill", "85 North", "Slot Canyon Café",
     "Student Union Memorial Center", "Tyndall Ave. Garage", "Udall Center",
-    "UAMC", "Vet. Sci. & Microbiology", "Visitor Center", "Yavapai", "Yuma"
+    "UAMC", "Vet. Sci. & Microbiology", "Visitor Center", "Yavapai", "Yuma",
+    "Cole and Jeannie Davis Sports Center"
 ]
 
 # mapping for common nicknames
@@ -51,7 +52,13 @@ ALIASES = {
     "enr2": "Environment and Natural Resources 2",
     "gould": "Gould-Simpson",
     "gs": "Gould-Simpson",
-    "triathlon hq": "Hillenbrand Aquatic Center"
+    "triathlon hq": "Hillenbrand Aquatic Center",
+    "cats": "C.A.T.S.",
+    "c.a.t.s.": "C.A.T.S.",
+    "clements": "C.A.T.S.",
+    "Ginny L. Clements Academic Center": "C.A.T.S.",
+    "mckale": "McKale Memorial Center",
+    "mckale center": "McKale Memorial Center"
 }
 
 def get_standard_name(name):
