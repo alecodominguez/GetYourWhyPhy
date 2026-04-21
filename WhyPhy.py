@@ -1,4 +1,13 @@
 """
+File: WhyPhy.py
+Purpose: This file mainly gets the current WiFi data from the connection between any given device
+in the form of ssid, signal strength, upload speed, download speed, and latency. Furthermore, the
+program has methods to measure jitteer, and packet loss based off the "host" measure. This reqires
+more precise calculations that measure the ates of change over time but are key to proper WiFi.
+All these data points are too much to process for a user so we create a rating that takes all of
+these into a single value. We take this values, convert them to a value within a range (0-100) and
+finally apply them to a weighted scale to have an accurate final value of WiFi quality.
+
 requirements (install via conda/pip):
     pip install speedtest-cli psutil
     OR
