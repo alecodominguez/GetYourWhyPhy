@@ -22,7 +22,7 @@ CAMPUS_BUILDINGS = [
     "McClelland", "McClelland Park", "McKale Memorial Center",
     "Medical Research", "Meinel", "Mines & Metallurgy", "Mirror Lab",
     "Modern Languages", "Mohave", "Music", "Navajo", "Nugent", "Nursing",
-    "Old Main", "Pacheco ILC", "Park Ave. Garage", "PSU", "PAS", "C.A.T.S.",
+    "Old Main", "Pacheco ILC", "Park Ave. Garage", "PSU", "PAS(Phys-Atmos Sciences)", "C.A.T.S.",
     "Pharmacy", "Pima", "Pinal", "Police", "Psychology", "Pueblo de la Cienega",
     "RLAS", "Robson Tennis Center", "Saguaro", "Sancet Stadium", "Santa Cruz",
     "SALT Center", "Schaefer", "Shantz", "Sierra", "Sixth St. Garage",
@@ -64,6 +64,8 @@ ALIASES = {
     "engineering design center": "Education North (EDC)",
     "la paz": "Colonia de la Paz",
     "civil": "Civil Engineering",
+    "Physics-Atmospheric Sciences Building": "PAS(Phys-Atmos Sciences)",
+    "pas": "PAS(Phys-Atmos Sciences)",
     "slhs": "Speech"
 }
 
