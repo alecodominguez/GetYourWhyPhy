@@ -66,6 +66,11 @@ ALIASES = {
     "civil": "Civil Engineering",
     "Physics-Atmospheric Sciences Building": "PAS(Phys-Atmos Sciences)",
     "pas": "PAS(Phys-Atmos Sciences)",
+    "Center for English as a Second Language": "CESL",
+    "M Pacheco ILC": "Pacheco ILC",
+    "M. Pacheco ILC": "Pacheco ILC",
+    "Manuel Pacheco Integrated Learning Center": "Pacheco ILC",
+    "ILC": "Pacheco ILC",
     "slhs": "Speech"
 }
 
@@ -74,19 +79,19 @@ def get_standard_name(name):
     Normalizes input and checks both the official list AND the aliases.
     """
     # takes name above and standarizes it to avoid uppercase and special character differences
-    clean_input = name.strip().lower().replace(" ", "").replace("-", "")
+    clean_input = name.strip().lower().replace(" ", "").replace("-", "").replace(".", "")
 
     # iterate through the Aliases list
     # normalize the keys in the dictionary for comparison
     # if they match, return the OFFICIAL string from CAMPUS_BUILDINGS
     for nickname, official_name in ALIASES.items():
-        clean_nickname = nickname.lower().replace(" ", "").replace("-", "")
+        clean_nickname = nickname.lower().replace(" ", "").replace("-", "").replace(".", "")
         if clean_input == clean_nickname:
             return official_name
 
     # iterate through the official list
     for building in CAMPUS_BUILDINGS:
-        clean_building = building.lower().replace(" ", "").replace("-", "")
+        clean_building = building.lower().replace(" ", "").replace("-", "").replace(".", "")
         if clean_input == clean_building:
             return building
     # return None if no match is found (for WhyPhy.py)

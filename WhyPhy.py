@@ -1,20 +1,25 @@
 """
 File: WhyPhy.py
 Purpose: This file mainly gets the current WiFi data from the connection between any given device
-in the form of ssid, signal strength, upload speed, download speed, and latency. Furthermore, the
-program has methods to measure jitteer, and packet loss based off the "host" measure. This reqires
-more precise calculations that measure the ates of change over time but are key to proper WiFi.
-All these data points are too much to process for a user so we create a rating that takes all of
+in the form of ssid, signal strength, upload speed, download speed, and latency using the 3rd party library
+"speedtest.cli". Furthermore, the program has methods to measure jitter, and packet loss based off the
+"host" measure. This requires more precise calculations that measure the ates of change over time but are
+key to proper WiFi. All these data points are too much to process for a user so we create a rating that takes all of
 these into a single value. We take this values, convert them to a value within a range (0-100) and
-finally apply them to a weighted scale to have an accurate final value of WiFi quality.
+finally apply them to a weighted scale to have an accurate final value of WiFi quality. This file
+prints the individual WiFi assesment report for the user to see. Lastly, we take the adapted raw
+data and export it to the server as a "request".
 
 requirements (install via conda/pip):
-    pip install speedtest-cli psutil
-    OR
-    conda install -c conda-forge speedtest-cli psutil
-
-    to run this, install dependencies and run in bash: python Wifi.py
-    - - - MAKE SURE YOU ARE IN THE FOLDER WITH Wifi.py - - -
+    1. clone the repository
+    2. "cd [INSERT FILEPATH]"
+    3. activate virtual environment
+        a. "macOS --> source .venv/bin/activate"
+        b. "Windows --> .\venv\Scripts\Activate"
+            i. if error, run: "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process"
+    4. "pip install -r requirements.txt"
+        a. this contains speedtest-cli and other dependencies
+    5. python WhyPhy.py
 """
 import requests  # needed to "push" data collected to database
 import time  # this is used to time how long the speed test takes
@@ -26,27 +31,27 @@ import datetime  # gives each run a specific date
 import re
 import locations  # Verify the location is on campus
 
-# DEPENDENCY CHECK
-# Speedtest is a third-party library; we catch the error to help the user install it.
+# DEPENDENCIES
+# ensure speedtest.cli is installed. We catch the error to help the user install it.
 try:
     import speedtest
 except ImportError:
     print(
-        "Missing dependency. Install it with: pip install speedtest-cli or conda install -c conda-forge speedtest-cli psutil")
+        "Missing dependency. Install all dependencies by running ")
     raise SystemExit(1)
 
-# SCORING CONFIGURATION
-# These weights determine how much each metric affects the final 0–100 linear score.
+# SCORING WEIGHTS
+# determine how much each metric affects the final 0–100 linear score.
 # We focus on Download and Latency
 WEIGHTS = {
-    "download": 35,  # Mbps
+    "download": 35,  # Mbps, more weight
     "upload": 20,  # Mbps
-    "latency": 30,  # ms (Lower is better)
-    "jitter": 10,  # ms (Consistency)
+    "latency": 30,  # ms (Lower is better), more weight
+    "jitter": 10,  # ms (Consistency), low weight but crucial to define good and bad signal
     "packet_loss": 5,  # %  (Reliability)
 }
 
-# Thresholds define the range for each metric.
+# Thresholds define the range for each metric to keep it within 100 points
 # For latency/jitter/loss, the values are reversed (e.g., 500ms is 0 points, 5ms is 100 points).
 THRESHOLDS = {
     "download": (0, 200),
@@ -55,7 +60,6 @@ THRESHOLDS = {
     "jitter": (100, 0),
     "packet_loss": (100, 0),
 }
-
 
 # MATHEMATICAL HELPERS
 def clamp(val, lo, hi):
