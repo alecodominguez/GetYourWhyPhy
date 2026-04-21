@@ -4,14 +4,14 @@ CAMPUS_BUILDINGS = [
     "Abrams", "Administration", "AME", "Apache", "Art and Museum of Art",
     "AHSC", "AHSC Library", "Arbol de la Vida", "Arizona Stadium",
     "Arizona State Museum", "Babcock", "Bartlett", "Beal Center",
-    "Bear Down Gym", "Bio-Sciences East", "Bio-Sciences West",
+    "Bear Down Gym", "Bio-Sciences East", "Bio-Sciences West", "Speech",
     "Biomedical Research Lab", "Bookstore", "CALA West", "CALA East",
     "CALS Greenhouse", "Centennial", "CESL", "Chavez", "CHRP",
     "Chemical Sciences", "Chemistry", "Cherry Ave. Garage",
     "Civil Engineering", "Cochise", "Coconino", "Colonia de la Paz",
     "Communications", "Computer Center", "Comstock", "Corleone Center",
     "Coronado", "DeConcini ENRB", "Douglass", "Drachman", "Drama",
-    "ECE", "Education", "El Portal", "Eller Theater", "Engineering",
+    "ECE", "Education", "Education North (EDC)", "El Portal", "Eller Theater", "Engineering",
     "Flandrau", "Forbes", "Geronimo", "Gila", "Gittings", "Gould-Simpson",
     "Graham", "Greenlee", "Harshbarger", "Harvill", "Haury", "Herring",
     "Highland Commons", "Highland Ave. Garage", "Hillenbrand Stadium",
@@ -28,7 +28,7 @@ CAMPUS_BUILDINGS = [
     "SALT Center", "Schaefer", "Shantz", "Sierra", "Sixth St. Garage",
     "Environment and Natural Resources 2","Hillenbrand Aquatic Center",
     "Social Sciences", "Sonora", "Steward Observatory", "Student Recreation Center",
-    "North REC", "Honors", "Cactus Grill", "85 North", "Slot Canyon Café",
+    "North REC", "Honors", "Cactus Grill", "85 North", "Slot Canyon Café", "Radicchio",
     "Student Union Memorial Center", "Tyndall Ave. Garage", "Udall Center",
     "UAMC", "Vet. Sci. & Microbiology", "Visitor Center", "Yavapai", "Yuma",
     "Cole and Jeannie Davis Sports Center"
@@ -58,7 +58,13 @@ ALIASES = {
     "clements": "C.A.T.S.",
     "Ginny L. Clements Academic Center": "C.A.T.S.",
     "mckale": "McKale Memorial Center",
-    "mckale center": "McKale Memorial Center"
+    "mckale center": "McKale Memorial Center",
+    "edc": "Education North (EDC)",
+    "education north": "Education North (EDC)",
+    "engineering design center": "Education North (EDC)",
+    "la paz": "Colonia de la Paz",
+    "civil": "Civil Engineering",
+    "slhs": "Speech"
 }
 
 def get_standard_name(name):
