@@ -30,6 +30,11 @@ import psutil  # reads system info like network stats (this has to be installed 
 import datetime  # gives each run a specific date
 import re
 import locations  # Verify the location is on campus
+import os
+import certifi
+
+# fix to set the SSL certificate path to the one provided by the certifi bundle
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 # DEPENDENCIES
 # ensure speedtest.cli is installed. We catch the error to help the user install it.
