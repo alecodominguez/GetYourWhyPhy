@@ -2,7 +2,7 @@
 
 CAMPUS_BUILDINGS = [
     "Abrams", "Administration", "AME", "Apache", "Art and Museum of Art",
-    "AHSC", "AHSC Library", "Arbol de la Vida", "Arizona Stadium",
+    "AHSC", "HSIB", "AHSC Library", "Arbol de la Vida", "Arizona Stadium",
     "Arizona State Museum", "Babcock", "Bartlett", "Beal Center",
     "Bear Down Gym", "Bio-Sciences East", "Bio-Sciences West", "Speech",
     "Biomedical Research Lab", "Bookstore", "CALA West", "CALA East",
@@ -71,6 +71,7 @@ ALIASES = {
     "M. Pacheco ILC": "Pacheco ILC",
     "Manuel Pacheco Integrated Learning Center": "Pacheco ILC",
     "ILC": "Pacheco ILC",
+    "Health Sciences Innovation Building": "HSIB",
     "slhs": "Speech"
 }
 
