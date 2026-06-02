@@ -108,3 +108,8 @@ def home(request: Request):
         )
     finally:
         db.close()
+
+@app.get("/view-log")
+def view_log():
+    with open("debug_log.txt", "r") as f:
+        return f.read()
