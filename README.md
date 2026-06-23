@@ -10,8 +10,8 @@ The system consists of three main components working together to map campus conn
 
 Our full paper, detailing the distributed software architecture, network normalization algorithm, and evaluation metrics, was prepared for the *University of Arizona Research Showcase (May 2026)*.
 
-**[Read the Full PDF Paper](./paper/GetYourWhyPhy_Paper.pdf)**
-**[View LaTeX Source Files](./paper/)**
+* **[Read the Full PDF Paper](./paper/GetYourWhyPhy_Paper.pdf)**
+* **[View LaTeX Source Files](./paper/)**
 
 ## Setup for Contributors
 The users gain kjnowledge on campus WiFi in exchange for their current WiFi information and Campus building location. Follow these steps:
