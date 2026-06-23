@@ -6,6 +6,13 @@ The system consists of three main components working together to map campus conn
 2.  **The Backend (`server.py`):** A FastAPI server that receives results and stores them in a database.
 3.  **The Tunnel (ngrok):** A secure bridge that allows campus users to reach the local server through university firewalls.
 
+## Research Paper
+
+Our full paper, detailing the distributed software architecture, network normalization algorithm, and evaluation metrics, was prepared for the *University of Arizona Research Showcase (May 2026)*.
+
+**[Read the Full PDF Paper](./paper/GetYourWhyPhy_Paper.pdf)**
+**[View LaTeX Source Files](./paper/)**
+
 ## Setup for Contributors
 The users gain kjnowledge on campus WiFi in exchange for their current WiFi information and Campus building location. Follow these steps:
 
