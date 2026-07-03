@@ -1,4 +1,6 @@
 # GetYourWhyPhy
+* **[Click here to check it out](https://opacity-cadillac-emporium.ngrok-free.dev/)**
+
 **GetYourWhyPhy** is a distributed WiFi performance mapping tool built for the University of Arizona campus. It crowdsources network metrics—such as Signal Strength, Download/Upload speeds, Latency, and Packet Loss—to identify the best (and worst) study spots across campus buildings.
 
 The system consists of three main components working together to map campus connectivity:
