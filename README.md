@@ -8,6 +8,13 @@ The system consists of three main components working together to map campus conn
 2.  **The Backend (`server.py`):** A FastAPI server that receives results and stores them in a database.
 3.  **The Tunnel (ngrok):** A secure bridge that allows campus users to reach the local server through university firewalls.
 
+## Demo Video
+<p align="center">
+  <a href="https://youtube.com">
+    <img src="[https://youtube.com](https://youtu.be/VJthtA6CzGs)" alt="Watch the Demo Video" width="70%">
+  </a>
+</p>
+
 ## Research Paper
 
 Our full paper, detailing the distributed software architecture, network normalization algorithm, and evaluation metrics, was prepared for the *University of Arizona Research Showcase (May 2026)*.
