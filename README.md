@@ -10,8 +10,8 @@ The system consists of three main components working together to map campus conn
 
 ## Demo Video
 <p align="center">
-  <a href="https://youtube.com">
-    <img src="[https://youtube.com](https://youtu.be/VJthtA6CzGs)" alt="Watch the Demo Video" width="70%">
+  <a href="https://youtu.be/VJthtA6CzGs">
+    <img src="https://img.youtube.com/vi/VJthtA6CzGs/0.jpg" alt="Watch the Demo Video" width="70%">
   </a>
 </p>
 
