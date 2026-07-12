@@ -33,6 +33,9 @@ import locations  # Verify the location is on campus
 import os
 import certifi
 
+import bssid_resolver     # NEW: Automated Mapping
+import device_profile     # NEW: Device Profiling
+
 # fix to set the SSL certificate path to the one provided by the certifi bundle
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
@@ -72,6 +75,7 @@ def clamp(val, lo, hi):
     return max(lo, min(hi, val))
 
 
+# noinspection PyTypeChecker
 def score_metric(value, lo, hi):
     """ Linearly maps a raw measurement to a 0–100 scale. Formula: ((Value - Floor) / (Range)) * 100"""
     if hi == lo:
@@ -150,9 +154,14 @@ def measure_packet_loss(host="8.8.8.8", count=20):
 
 
 def get_signal_info():
+    """Returns ssid, signal, and bssid. BSSID is what powers the Automated Mapping
+    in bssid_resolver.py. It is the MAC address of the specific access point
+    radio the device is associated with, which stays fixed to a physical
+    location even though signal strength and SSID name changes."""
     os_name = platform.system()
     ssid = "Unknown"
     signal = "N/A"
+    bssid = None
 
     try:
         if os_name == "Windows":
@@ -165,8 +174,8 @@ def get_signal_info():
                     ssid = line.split(":")[1].strip()
                 if "Signal" in line:
                     signal = line.split(":")[1].strip()  # Returns percentage (e.g. 90%)
-
-
+                if "BSSID" in line:
+                    bssid = line.split(":", 1)[1].strip().lower()
 
         elif os_name == "Darwin":
             try:
@@ -190,12 +199,15 @@ def get_signal_info():
                         # Linear mapping: -50dBm (100%) to -100dBm (0%)
                         quality = max(0, min(100, 2 * (dbm_int + 100)))
                         signal = f"{quality}%"
-            except Exception as e:
+                    # 3. BSSID
+                    if "BSSID:" in lines[i]:
+                        bssid = lines[i].split(":", 1)[1].strip().lower()
+            except Exception:
                 pass
 
         elif os_name == "Linux":
             # Linux: uses 'nmcli' (Network Manager)
-            cmd = "nmcli -t -f active,ssid,signal dev wifi"
+            cmd = "nmcli -t -f active,ssid,signal,bssid dev wifi"
             output = subprocess.check_output(cmd, shell=True).decode()
 
             for line in output.split('\n'):
@@ -203,12 +215,14 @@ def get_signal_info():
                     parts = line.split(":")
                     ssid = parts[1]
                     signal = f"{parts[2]}%"
+                    if len(parts) > 3:
+                        bssid = parts[3].lower()
 
-    except Exception as e:
+    except Exception:
         # If a command fails or a tool isn't installed, we fail gracefully
         pass
 
-    return ssid, signal
+    return ssid, signal, bssid
 
 
 # UI / FORMATTIng
@@ -233,7 +247,7 @@ def export_to_server(data, location_name):
         Sends the collected metrics to the FastAPI central server.
     """
     # Replace with your actual server URL (e.g., your PythonAnywhere or Pi address)
-    URL = "https://opacity-cadillac-emporium.ngrok-free.dev/log-wifi"
+    URL = "https://whyphy.app/log-wifi"
     payload = {
         "location": location_name,
         "download": data["download"],
@@ -242,13 +256,15 @@ def export_to_server(data, location_name):
         "jitter": data["jitter"],
         "packet_loss": data["packet_loss"],
         "score": data["score"],
-        "ssid": data["ssid"]
+        "ssid": data["ssid"],
+        "bssid": data.get("bssid"),
+        "score_adjusted": data.get("score_adjusted"),
+        "device_os": data.get("device_os"),
+        "device_wifi_standard": data.get("device_wifi_standard"),
     }
 
-    headers = {"ngrok-skip-browser-warning": "true"}
-
     try:
-        response = requests.post(URL, json=payload, headers=headers, timeout=10)
+        response = requests.post(URL, json=payload, timeout=10)
         # Parse the JSON response from your FastAPI server
         server_response = response.json()
         if response.status_code == 200 and server_response.get("status") == "success":
@@ -259,21 +275,28 @@ def export_to_server(data, location_name):
         else:
             print(f"\n[!] Server error: {response.status_code}")
 
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         print(f"\n[!] Connection failed: Could not reach the server.")
 
 
 # MAIN EXECUTION
 def main():
     # 1. Initialization and Signal Check
-    ssid, signal = get_signal_info()
+    ssid, signal, bssid = get_signal_info()
     print("-" * 30)
     print(f"Connected to: {ssid}")
     print(f"Signal Strength: {signal}")
     print("-" * 30)
 
-    # NEW: Ask the user where they are so the data is labeled for ML
-    location_name = input("Enter your current building/location: ").strip()
+    # NEW: try Automated Mapping via BSSID before falling back to manual entry
+    location_name = bssid_resolver.resolve_building(bssid)
+    if location_name:
+        print(f"[i] Auto-detected building from BSSID: {location_name}")
+        confirm = input("Press Enter to confirm, or type a different building: ").strip()
+        if confirm:
+            location_name = confirm
+    else:
+        location_name = input("Enter your current building/location: ").strip()
 
     # 2. Data Gathering
     print("[1/3] Speed Test...")
@@ -294,6 +317,16 @@ def main():
     sub_scores = {m: score_metric(raw_data[m], *THRESHOLDS[m]) for m in raw_data}
     total = round(sum(sub_scores[m] * WEIGHTS[m] / 100 for m in WEIGHTS), 1)
     letter, label = grade(total)
+
+    # NEW: Device Profiling - device-relative score, shown alongside (never
+    # instead of) the absolute score so the leaderboard stays comparable.
+    profile = device_profile.get_device_profile()
+    adjusted_download = device_profile.adjusted_download_score(download, profile["wifi_standard"])
+    score_adjusted = None
+    if adjusted_download is not None:
+        adjusted_sub_scores = dict(sub_scores)
+        adjusted_sub_scores["download"] = adjusted_download
+        score_adjusted = round(sum(adjusted_sub_scores[m] * WEIGHTS[m] / 100 for m in WEIGHTS), 1)
 
     # 4. Final Report Output
     SEP = "═" * 58
@@ -317,6 +350,8 @@ def main():
     print(SEP)
     print(f"  OVERALL SCORE: {total}/100 [{letter}] - {label}")
     print(f"  {bar(total, 50)}")
+    if score_adjusted is not None:
+        print(f"  (Relative to your {profile['wifi_standard']} adapter: {score_adjusted}/100)")
     print(SEP)
 
     matched_building = locations.get_standard_name(location_name)
@@ -327,8 +362,15 @@ def main():
         export_data = raw_data.copy()
         export_data["score"] = total
         export_data["ssid"] = ssid
+        export_data["bssid"] = bssid
+        export_data["score_adjusted"] = score_adjusted
+        export_data["device_os"] = profile["os"]
+        export_data["device_wifi_standard"] = profile["wifi_standard"]
 
         export_to_server(export_data, matched_building)
+
+        # Feed the confirmed building back into the BSSID registry as a vote
+        bssid_resolver.submit_bssid_vote(bssid, matched_building)
 
     # keeps terminal open so user can view personalized report
     input("\nPress Enter to close this window...")
