@@ -3,6 +3,8 @@
 
 **GetYourWhyPhy** is a distributed WiFi performance mapping tool built for the University of Arizona campus. It crowdsources network metrics—such as Signal Strength, Download/Upload speeds, Latency, and Packet Loss—to identify the best (and worst) study spots across campus buildings.
 
+The name is a play on the "PHY" (physical) layer of the OSI (Open Systems Interconnection) network stack. This layer determines whether your Wi-Fi is fast and stable or slow and dropping. WhyPhy measures that layer directly, so instead of guessing which building has good Wi-Fi, you can see it.
+
 The system consists of three main components working together to map campus connectivity:
 1.  **The Client (`WiFi.py`):** A Python script run by users to perform localized network diagnostics.
 2.  **The Backend (`server.py`):** A FastAPI server that receives results and stores them in a database.
