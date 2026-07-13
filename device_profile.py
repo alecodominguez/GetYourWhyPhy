@@ -1,42 +1,37 @@
 """
 File: device_profile.py
-Purpose: Fingerprint the contributing device's networking hardware so the
-WhyPhy Score can be interpreted relative to what that hardware is actually
-capable of, instead of penalizing someone on a 2015 laptop for not hitting
-the same numbers as someone with a Wi-Fi 6E card.
+Purpose: Reviews the contributing device's networking hardware so the
+WhyPhy Score is produced relative to what that hardware is actually
+capable of. It gives the score a weight contribution to teh average so
+someone on a 2015 laptop will not produce a result of the same weight as
+someone with a Wi-Fi 6E card. This now really emphazised the "PHY" from WHYPHY.
 
-This module answers two separate questions:
-  1. What Wi-Fi standard / theoretical ceiling is this adapter capable of?
-  2. Given that ceiling, how should we adjust (not replace) the raw score?
+This stems from the "future work" section:
+  1. What Wi-Fi standard ceiling is this adapter capable of?
+  2. Given that ceiling, how should we adjust the raw score?
 
 Design notes:
-  - We NEVER hide or overwrite the raw, absolute metrics. Two scores are
-    always kept: "score" (absolute, comparable across all devices - what's
-    shown on the leaderboard by default) and "score_adjusted" (relative to
-    the device's own ceiling - useful for a "is MY hardware the problem"
-    view). Mixing these silently would make the leaderboard misleading.
-  - Radio type detection reuses the same OS commands WhyPhy.py already
-    shells out to (netsh / system_profiler / nmcli), so there's no new
-    permission surface.
-  - If detection fails, we fall back to a conservative "unknown" ceiling
-    (draws no adjustment) rather than guessing.
+  1. We NEVER hide or overwrite the raw, absolute metrics. Two scores are
+    always kept: "score" and "score_adjusted" (ie. is hardware the problem?).
+    Mixing these silently would make the leaderboard misleading.
+  2. Radio type detection reuses the same OS commands WhyPhy.py already
+    shells out to. No new permissions needed.
+  3. If detection fails, we fall back to a conservative "unknown" ceiling.
 """
 import platform
 import re
 import subprocess
-
 import psutil
 
-# Theoretical max PHY throughput (Mbps) per Wi-Fi generation, single-stream
-# real-world achievable figure (not the marketing "up to X Gbps" number).
+# Theoretical max PHY throughput (in Mbps) per Wi-Fi generation, single-stream
+# real-world achievable figure, not the max Gbps.
 WIFI_STANDARD_CEILINGS = {
     "802.11n": 150,     # Wi-Fi 4
     "802.11ac": 433,    # Wi-Fi 5
-    "802.11ax": 600,    # Wi-Fi 6 / 6E (conservative single-stream figure)
+    "802.11ax": 600,    # Wi-Fi 6 / 6E
     "802.11be": 1000,   # Wi-Fi 7
     "unknown": None,
 }
-
 
 def _run(cmd):
     try:
@@ -44,11 +39,10 @@ def _run(cmd):
     except Exception:
         return ""
 
-
 def get_wifi_standard():
     """
-    Returns one of the WIFI_STANDARD_CEILINGS keys by parsing the same
-    OS-level Wi-Fi interface info WhyPhy.py already reads for SSID/BSSID.
+    Method returns one of the WIFI_STANDARD_CEILINGS keys after parsing the same
+    OS-level Wi-Fi interface info that WhyPhy.py reads for the SSID/BSSID data.
     """
     system = platform.system()
     try:
@@ -93,14 +87,11 @@ def get_wifi_standard():
 
     return "unknown"
 
-
 def get_device_profile():
     """
-    Collects a lightweight, non-identifying hardware profile:
-    OS family, CPU core count, RAM (GB, rounded), and Wi-Fi standard.
-    Deliberately excludes anything identifying (hostname, MAC address,
-    serial numbers) - this is for score calibration, not fingerprinting
-    individual users.
+    This method collects a lightweight, non-identifying hardware profile:
+    OS family, CPU core count, RAM (in GB), and Wi-Fi standard.
+    Deliberately excludes anything identifying. Only used to calibrate the hardware.
     """
     try:
         ram_gb = round(psutil.virtual_memory().total / (1024 ** 3))
@@ -114,21 +105,18 @@ def get_device_profile():
         "wifi_standard": get_wifi_standard(),
     }
 
-
 def adjusted_download_score(download_mbps, wifi_standard, floor=0):
     """
-    Returns a 0-100 score for download throughput RELATIVE to what this
-    device's Wi-Fi standard can theoretically achieve, instead of the
-    fixed 0-200 Mbps scale used for the absolute score. Returns None
-    (meaning: "no adjustment, use the absolute score as-is") when the
-    standard is unknown, so we never fabricate an adjustment.
+    Method returns a 0-100 score for download capabilities relative to
+    what this the device's Wi-Fi standard is. It replaces teh absolute
+    score used for all devices. If standard is unknown we just use the
+    absolute score
     """
     ceiling = WIFI_STANDARD_CEILINGS.get(wifi_standard)
     if not ceiling:
         return None
     ratio = (download_mbps - floor) / (ceiling - floor)
     return round(max(0, min(100, ratio * 100)), 1)
-
 
 if __name__ == "__main__":
     import json
