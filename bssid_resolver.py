@@ -7,15 +7,9 @@ room. Once enough contributors confirm "BSSID xx:xx:xx:xx:xx:xx = Main
 Library", every future run from that same AP can skip the manual
 building-name prompt entirely.
 
-Important correction vs. the original ask: speedtest-cli itself has no
-concept of BSSID - it only talks to speedtest.net servers, not the local
-Wi-Fi radio. BSSID has to come from the OS Wi-Fi interface query (the same
-netsh / system_profiler / nmcli calls WhyPhy.py already uses for SSID),
-which is what get_bssid() below does.
-
-Crowdsourced trust model:
+Dependencies:
   - A BSSID is only auto-applied once it has reached CONFIRMATION_THRESHOLD
-    independent confirmations for the *same* building. Below that, the user
+    independent confirmations for the building. Below that, the user
     is still asked to type/confirm their building, and that answer is sent
     up as a vote.
   - This prevents one mistyped location (or one malicious submission) from
