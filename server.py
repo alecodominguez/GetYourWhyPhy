@@ -19,6 +19,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 static_path = os.path.join(BASE_DIR, "static")
 downloads_path = os.path.join(BASE_DIR, "downloads")
 templates_path = os.path.join(BASE_DIR, "templates")
+data_path = os.path.join(BASE_DIR, "data")
+
+# Ensure the SQLite data directory exists before the engine tries to open a
+# file inside it. SQLite will refuse to create the .db file inside a directory
+# that doesn't exist yet.
+os.makedirs(data_path, exist_ok=True)
 
 # Remote-admin auth token, the digital key to modify the server. Set as an
 # environment variable on the server (e.g. in the systemd unit's
