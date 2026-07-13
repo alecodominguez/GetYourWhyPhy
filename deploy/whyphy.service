@@ -1,0 +1,20 @@
+[Unit]
+Description=GetYourWhyPhy FastAPI server
+After=network.target
+
+[Service]
+Type=simple
+User=whyphy
+WorkingDirectory=/opt/GetYourWhyPhy
+# Set a strong random token here for the /admin/* endpoints in server.py.
+# Generate one with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+Environment=WHYPHY_ADMIN_TOKEN=CHANGE_ME_GENERATE_A_REAL_TOKEN
+ExecStart=/opt/GetYourWhyPhy/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Bind to localhost only - Caddy/Nginx (see Caddyfile) terminates TLS and
+# reverse-proxies to this port. The app itself is never exposed directly.
+
+[Install]
+WantedBy=multi-user.target

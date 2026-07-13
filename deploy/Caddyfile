@@ -1,0 +1,12 @@
+# Caddyfile - drop this at /etc/caddy/Caddyfile on the VPS.
+# Caddy handles Let's Encrypt certificate issuance/renewal automatically -
+# no certbot cron jobs to babysit, which matters if you're managing this
+# server from out of state.
+
+whyphy.app {
+    reverse_proxy 127.0.0.1:8000
+}
+
+www.whyphy.app {
+    redir https://whyphy.app{uri} permanent
+}
