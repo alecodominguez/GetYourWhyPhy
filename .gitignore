@@ -1,4 +1,4 @@
-venv/
+.venv/
 __pycache__/
 *.db
 *.spec
@@ -7,3 +7,4 @@ dist/
 .DS_Store
 .env
 .vscode/
+.idea/
