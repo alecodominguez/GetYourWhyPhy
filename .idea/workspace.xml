@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="342a1753-9f50-40c0-a5df-2118b4788b5d" name="Changes" comment="modified gitignore">
+      <change beforePath="$PROJECT_DIR$/downloads/WhyPhy_Mac.zip" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="INCOMING_COMMITS_CHECK_STRATEGY" value="FETCH" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;alecodominguez&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/alecodominguez/GetYourWhyPhy.git&quot;,
+    &quot;accountId&quot;: &quot;44de3c9d-2feb-486e-935f-dce4f05c1eb6&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3G0XX7VyKPYUSBa5oI0vdL6U0e9" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "main",
+    "git.auto.fetch.suggestion.counter": "1",
+    "last_opened_file_path": "/Users/alejandrojavierdominguez/Documents/Workspaces/PycharmProjects/GetYourWhyPhy",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.general"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="342a1753-9f50-40c0-a5df-2118b4788b5d" name="Changes" comment="" />
+      <created>1783109498900</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1783109498900</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Test">
+      <option name="closed" value="true" />
+      <created>1783871543643</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1783871543643</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Test2">
+      <option name="closed" value="true" />
+      <created>1783871600454</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1783871600454</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Added BSSID capture to get_signal_info() so bssid_resolver.py can attempt Automated Mapping before falling back to the manual building prompt.&#10;Added device_profile integration so the exported payload carries a device-relative score alongside the original absolute score. Function export_to_server() now points at the whyphy.app deployment instead of the ngrok tunnel (see deploy/README.md for the migration).">
+      <option name="closed" value="true" />
+      <created>1783900399238</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1783900399238</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Modified server.py to manage the bssid logic added into WhyPhy.py plus a confirmation threshold function to take care of mismatched locations from bssid.">
+      <option name="closed" value="true" />
+      <created>1783902889348</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1783902889348</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Added passivetesting_monitor.py which reassembles the original IoT Ghost device idea to gether WiFi information. It explicitly tells the user about the process.">
+      <option name="closed" value="true" />
+      <created>1783903425726</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1783903425726</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Developed device_profile.py which dives deeper into teh &quot;PHY&quot; aspect of WhyPhy. It takes OS interface info to determine the wifi standard of teh device and then produce the weighted score for that device.">
+      <option name="closed" value="true" />
+      <created>1783905775329</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1783905775329</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Small changes to migrate from laptop to VPS.">
+      <option name="closed" value="true" />
+      <created>1783911161153</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1783911161153</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Fixed server.py to create db if it does not exist yet.">
+      <option name="closed" value="true" />
+      <created>1783914764153</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1783914764153</updated>
+    </task>
+    <task id="LOCAL-00009" summary="additional files">
+      <option name="closed" value="true" />
+      <created>1783915214815</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1783915214815</updated>
+    </task>
+    <task id="LOCAL-00010" summary="modified gitignore">
+      <option name="closed" value="true" />
+      <created>1783915714936</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1783915714936</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Test" />
+    <MESSAGE value="Test2" />
+    <MESSAGE value="Added BSSID capture to get_signal_info() so bssid_resolver.py can attempt Automated Mapping before falling back to the manual building prompt.&#10;Added device_profile integration so the exported payload carries a device-relative score alongside the original absolute score. Function export_to_server() now points at the whyphy.app deployment instead of the ngrok tunnel (see deploy/README.md for the migration)." />
+    <MESSAGE value="Modified server.py to manage the bssid logic added into WhyPhy.py plus a confirmation threshold function to take care of mismatched locations from bssid." />
+    <MESSAGE value="Added passivetesting_monitor.py which reassembles the original IoT Ghost device idea to gether WiFi information. It explicitly tells the user about the process." />
+    <MESSAGE value="Developed device_profile.py which dives deeper into teh &quot;PHY&quot; aspect of WhyPhy. It takes OS interface info to determine the wifi standard of teh device and then produce the weighted score for that device." />
+    <MESSAGE value="Small changes to migrate from laptop to VPS." />
+    <MESSAGE value="Fixed server.py to create db if it does not exist yet." />
+    <MESSAGE value="additional files" />
+    <MESSAGE value="modified gitignore" />
+    <option name="LAST_COMMIT_MESSAGE" value="modified gitignore" />
+  </component>
+</project>
