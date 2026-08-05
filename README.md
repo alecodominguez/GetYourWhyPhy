@@ -1,68 +1,85 @@
 # GetYourWhyPhy
-[Click here to check it out](https://whyphy.app/)
 
-**GetYourWhyPhy** is a distributed WiFi performance mapping tool built for the University of Arizona campus. It crowdsources network metrics—such as Signal Strength, Download/Upload speeds, Latency, and Packet Loss—to identify the best (and worst) study spots across campus buildings.
+![Python](https://img.shields.io/badge/Python-3.x-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688) ![License](https://img.shields.io/badge/license-MIT-green)
 
-The name is a play on the "PHY" (physical) layer of the OSI (Open Systems Interconnection) network stack. This layer determines whether your Wi-Fi is fast and stable or slow and dropping. WhyPhy measures that layer directly, so instead of guessing which building has good Wi-Fi, you can see it.
+**[Try the live demo →](https://opacity-cadillac-emporium.ngrok-free.dev/)** · **[Watch the demo video →](https://youtu.be/VJthtA6CzGs)** · **[Read the research paper →](./paper/GetYourWhyPhy_Paper.pdf)**
 
-The system consists of three main components working together to map campus connectivity:
-1.  **The Client (`WhyPhy.py`):** A Python script run by users to perform localized network diagnostics.
-2.  **The Backend (`server.py`):** A FastAPI server that receives results and stores them in a database.
-3.  **The Tunnel (ngrok):** A secure bridge that allows campus users to reach the local server through university firewalls.
+GetYourWhyPhy is a distributed Wi-Fi performance mapping tool built for the University of Arizona campus. It crowdsources network metrics — signal strength, download/upload speed, latency, and packet loss — to identify the best (and worst) study spots across campus buildings.
 
-## Demo Video
-<p align="center">
-  <a href="https://youtu.be/VJthtA6CzGs">
-    <img src="https://img.youtube.com/vi/VJthtA6CzGs/0.jpg" alt="Watch the Demo Video" width="70%">
-  </a>
-</p>
+The name is a play on the "PHY" (physical) layer of the OSI network stack — the layer that determines whether your Wi-Fi is fast and stable or slow and dropping. WhyPhy measures that layer directly, so instead of guessing which building has good Wi-Fi, you can see it.
 
-## Research Paper
+## Table of Contents
 
-Our full paper, detailing the distributed software architecture, network normalization algorithm, and evaluation metrics, was prepared for the *University of Arizona Research Showcase (May 2026)*.
+- [How it works](#how-it-works)
+- [My contributions](#my-contributions)
+- [Quick start (as a user)](#quick-start-as-a-user)
+- [Developer setup (server-side)](#developer-setup-server-side)
+- [Data & analysis](#data--analysis)
+- [Roadmap](#roadmap)
 
-* **[Read the Full PDF Paper](./paper/GetYourWhyPhy_Paper.pdf)**
-* **[View LaTeX Source Files](./paper/)**
+## How it works
 
-## Setup for Contributors
-The users gain kjnowledge on campus WiFi in exchange for their current WiFi information and Campus building location. Follow these steps:
+Three components work together to map campus connectivity:
 
-### 1. Install Dependencies
-You will need Python 3 and a few libraries. Run the following command in your terminal:
+1. **The Client (`WhyPhy.py`):** a Python script users run locally to perform network diagnostics and report results.
+2. **The Backend (`server.py`):** a FastAPI server that receives results and stores them in a SQLite database.
+3. **The Tunnel (ngrok):** a secure bridge that lets campus users reach the local server through university firewalls.
+
+## My contributions
+
+This was a 3-person team project. My scope:
+
+- Designed and authored the server-side architecture and full repository structure.
+- Built `export_to_server` in `WhyPhy.py`, packaging five raw network metrics (download, upload, latency, jitter, packet loss) captured across Windows/macOS/Linux into a standardized payload.
+- Built `server.py` (FastAPI + SQLite + Pydantic) to handle concurrent client requests.
+- Designed and integrated the fuzzy-matching engine in `locations.py` that standardizes messy, user-typed building names into verified campus locations.
+- Owned end-to-end deployment and hosting (PyInstaller packaging, GitHub + ngrok).
+- Piloted an initial ESP8266 IoT hardware approach, then made the call to pivot to a software-only architecture after hitting WPA2-Enterprise authentication limits — cut infrastructure cost to zero without losing functionality.
+
+Teammates Jaden Beil and RJ Edwards built the client-side Terminal User Interface (TUI) and the 0–100 network quality normalization algorithm that these components integrate with.
+
+## Quick start (as a user)
+
+You get your building's Wi-Fi rating (plus tips) in exchange for sharing your current Wi-Fi speed data.
+
 ```bash
 pip install requests speedtest-cli psutil
-```
-
-### 2. Run the Collection Script
-Execute the script and enter your current building or campus location when prompted:
-```bash
 python WhyPhy.py
 ```
-*You get to know your WiFi rating plus tips in exchange for your WiFi speed data*
 
-## Developer Setup (Server-side)
-To run the central server on your own machine (needed to be running in real-time to gather data):
+Follow the prompts to enter your current building or campus location.
 
-1.  **Environment:** Create and activate a virtual environment.
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-2.  **Install Requirements:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Start FastAPI:**
-    ```bash
-    uvicorn server:app --host 0.0.0.0 --port 8000
-    ```
-4.  **Expose the Server:** If running on a restricted network (UAWiFi), use ngrok to have your own public domain.
+## Developer setup (server-side)
 
-## Data & Analysis
-The project stores logs in a SQLite database (`campus_wifi.db`). We use this data to:
-* Generate a "Leaderboard" of the fastest campus buildings.
-* Identify consistent dead zones in older campus infrastructure.
-* **Potentially:** Build a Machine Learning model to predict network congestion based on the day of the week and time. Also, transfer server to Raspberry Pi to run the server non-stop.
+Needed if you want to run the central server yourself in real time:
+
+```bash
+# 1. Environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Install requirements
+pip install -r requirements.txt
+
+# 3. Start FastAPI
+uvicorn server:app --host 0.0.0.0 --port 8000
+```
+
+If running on a restricted network (e.g., campus Wi-Fi), use ngrok to expose the server on a public domain.
+
+## Data & analysis
+
+Logs are stored in a SQLite database (`campus_wifi.db`). We use this data to:
+
+- Generate a leaderboard of the fastest campus buildings.
+- Identify consistent dead zones in older campus infrastructure.
+
+## Roadmap
+
+- Passive background testing and automated building mapping using BSSID data.
+- A machine learning model to predict network congestion by day/time.
+- Migrate the server to a Raspberry Pi for always-on hosting.
 
 ---
-*Maintained by Aleco Dominguez, Jaden Beil, RJ Edwards | University of Arizona*
+
+*Maintained by Aleco Dominguez, Jaden Beil, and RJ Edwards | University of Arizona*
