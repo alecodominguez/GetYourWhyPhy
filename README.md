@@ -16,7 +16,7 @@ Our full paper, detailing the distributed software architecture, network normali
 * **[View LaTeX Source Files](./paper/)**
 
 ## Setup for Contributors
-The users gain kjnowledge on campus WiFi in exchange for their current WiFi information and Campus building location. Follow these steps:
+The users gain knowledge on campus WiFi in exchange for their current WiFi information and Campus building location. Follow these steps:
 
 ### 1. Install Dependencies
 You will need Python 3 and a few libraries. Run the following command in your terminal:
@@ -30,6 +30,19 @@ Execute the script and enter your current building or campus location when promp
 python WhyPhy.py
 ```
 *You get to know your WiFi rating plus tips in exchange for your WiFi speed data*
+
+### 3. (Optional) Passive background monitoring
+For continuous connectivity-drop detection instead of one-off manual runs:
+```bash
+python passive_monitor.py run --building "Main Library"   # try it in the foreground first
+python passive_monitor.py install                         # register as a login-time service
+python passive_monitor.py status                          # check it's running
+python passive_monitor.py uninstall                       # remove it
+```
+Opt-in only, visibly running, network-liveness only (no traffic inspection) - see the top of `passive_monitor.py` for the full transparency notes. For a menu-bar/tray status indicator: `pip install -r requirements-monitor.txt` first. If the building can't be auto-detected from the Wi-Fi access point, the installed service has nobody to ask, so confirm it works with `run` first.
+
+### 4. (Optional) No install at all - WhyPhy Web Lite
+For a 30-second throughput/latency check with nothing to download, visit [whyphy.app/lite](https://whyphy.app/lite). It covers less ground than the full tool (no BSSID auto-mapping, no real jitter/packet-loss), but there's nothing to install and no OS security warning.
 
 ## Developer Setup (Server-side)
 To run the central server on your own machine (needed to be running in real-time to gather data):
@@ -47,13 +60,13 @@ To run the central server on your own machine (needed to be running in real-time
     ```bash
     uvicorn server:app --host 0.0.0.0 --port 8000
     ```
-4.  **Production deployment:** for the live `whyphy.app` deployment, see `deploy/README.md` — it covers hosting on an always-on VPS with Caddy + automatic HTTPS instead of an ngrok tunnel.
+4.  **Production deployment:** for the live `whyphy.app` deployment, see `deploy/README.md` — it covers hosting on an always-on VPS with Caddy + automatic HTTPS. For updating the live server after a push, see `docs/UPDATING.md`.
 
 ## Data & Analysis
-The project stores logs in a SQLite database (`campus_wifi.db`). We use this data to:
+The project stores logs in a SQLite database (`data/campus_wifi.db`, created automatically on first run). We use this data to:
 * Generate a "Leaderboard" of the fastest campus buildings.
 * Identify consistent dead zones in older campus infrastructure.
-* **Potentially:** Build a Machine Learning model to predict network congestion based on the day of the week and time. Also, transfer server to Raspberry Pi to run the server non-stop.
+* **Potentially:** Build a Machine Learning model to predict network congestion based on the day of the week and time.
 
 ---
 *Maintained by Aleco Dominguez, Jaden Beil, RJ Edwards | University of Arizona*

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WhyPhy Web Lite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; margin: 40px; background: #f0f2f5; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 560px; margin: 0 auto; }
+        h1 { color: #AB0520; margin-top: 0; }
+        .subtitle { color: #444; line-height: 1.5; margin-bottom: 20px; }
+        .limits-note { background: #fff8e6; border-left: 4px solid #ffc107; padding: 12px 16px; font-size: 0.9rem; color: #5c4a00; margin-bottom: 25px; border-radius: 4px; }
+        select, button { width: 100%; padding: 12px; font-family: 'Montserrat', sans-serif; font-size: 1rem; border-radius: 6px; box-sizing: border-box; }
+        select { border: 1px solid #ccc; margin-bottom: 15px; }
+        button { background-color: #AB0520; color: white; border: none; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.85; }
+        button:disabled { background-color: #999; cursor: not-allowed; }
+        .progress-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .progress-line .val { font-weight: bold; color: #0C234B; }
+        #results { margin-top: 20px; display: none; }
+        .score-display { text-align: center; margin: 20px 0; }
+        .score-display .big { font-size: 3rem; font-weight: bold; color: #0C234B; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #0C234B; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>WhyPhy Web Lite</h1>
+    <p class="subtitle">A 30-second connection check, right in this tab. Nothing to install, no OS warnings.</p>
+
+    <div class="limits-note">
+        <strong>What this doesn't do</strong>: a browser can't read your Wi-Fi's
+        BSSID/SSID or send real ICMP pings, so Lite skips automated building
+        detection and approximates latency, jitter and packet loss from
+        repeated page requests instead. For the full picture, the
+        <a href="/">native WhyPhy tool</a> is more accurate.
+    </div>
+
+    <label for="building">Building:</label>
+    <select id="building">
+        <option value="" disabled selected>Select your building...</option>
+        {% for building in buildings %}
+        <option value="{{ building }}">{{ building }}</option>
+        {% endfor %}
+    </select>
+
+    <button id="runBtn" onclick="runLiteTest()">Run Test</button>
+
+    <div id="progress" style="margin-top: 20px;"></div>
+
+    <div id="results">
+        <div class="score-display">
+            <div class="big" id="scoreValue">--</div>
+            <div>WhyPhy Score</div>
+        </div>
+        <div class="progress-line"><span>Download</span><span class="val" id="dlResult">--</span></div>
+        <div class="progress-line"><span>Upload</span><span class="val" id="ulResult">--</span></div>
+        <div class="progress-line"><span>Latency</span><span class="val" id="latResult">--</span></div>
+        <div class="progress-line"><span>Jitter (approx.)</span><span class="val" id="jitterResult">--</span></div>
+        <p id="submitStatus" style="margin-top: 15px; font-size: 0.9rem; color: #666;"></p>
+    </div>
+
+    <a class="back-link" href="/">&larr; Back to the full leaderboard</a>
+</div>
+
+<script src="/static/lite.js"></script>
+</body>
+</html>

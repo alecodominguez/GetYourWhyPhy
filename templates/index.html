@@ -151,6 +151,18 @@
             border-radius: 20px;
             font-weight: bold;
         }
+
+        .adjusted-note {
+            color: #666;
+            margin-left: 6px;
+        }
+
+        .info-tip {
+            cursor: help;
+            color: #0C234B;
+            font-weight: normal;
+            border-bottom: 1px dotted #0C234B;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +193,13 @@
             Learn more and download the source code from our <a href="https://github.com/alecodominguez/GetYourWhyPhy" target="_blank" rel="noopener noreferrer">GitHub</a>
             Repository.
         </p>
+        <p style="font-size: 0.9em; color: #666; margin-top: 15px;">
+            Don't want to install anything? Try
+            <a href="/lite">WhyPhy Web Lite</a> - a quick 30-second throughput
+            check right in your browser. It covers less ground than the full
+            tool (no BSSID auto-mapping, no real jitter/packet-loss), but
+            there's nothing to download.
+        </p>
     </div>
 
     <h1>UofA WhyPhy Leaderboard</h1>
@@ -203,12 +222,18 @@
             {% for stat in building_stats %}
             {# 1. Define variables here to avoid editor errors in the style tag #}
             {% set score = stat.avg_score|default(0) %}
+            {% set adjusted = stat.avg_score_adjusted %}
             {% set bar_color = "#28a745" if score >= 80 else "#ffc107" if score >= 50 else "#dc3545" %}
 
             <div class="average-card">
                 <div style="flex-grow: 1; margin-right: 20px;">
                     <strong>{{ stat.location }}</strong>
                     <small>({{ stat.test_count }} reports)</small>
+                    {% if adjusted is not none %}
+                    <small class="adjusted-note" title="Average score after adjusting for each contributor's Wi-Fi hardware generation.">
+                        &middot; device-adjusted avg: {{ "%.1f"|format(adjusted) }}
+                    </small>
+                    {% endif %}
 
                     <div class="rating-bar-container" style="margin-top: 8px;">
                         <div class="rating-bar-fill"
@@ -235,6 +260,11 @@
             <th>Upload</th>
             <th>Latency</th>
             <th>WhyPhy Score</th>
+            <th>
+                Device-Adjusted
+                <span class="info-tip" tabindex="0"
+                      title="Scores download speed relative to that device's own Wi-Fi generation (802.11n/ac/ax), so older hardware isn't unfairly compared to newer laptops. Shown alongside, never instead of, the absolute WhyPhy Score - the leaderboard ranks on the absolute score.">&#9432;</span>
+            </th>
             <th>Reported</th>
         </tr>
         </thead>
@@ -249,6 +279,16 @@
 						<span class="badge {% if log.score >= 80 %}status-fast{% elif log.score >= 50 %}status-average{% else %}status-slow{% endif %}">
 							{{ log.score }}
 						</span>
+            </td>
+            <td>
+                {% if log.score_adjusted is not none %}
+                <span class="badge {% if log.score_adjusted >= 80 %}status-fast{% elif log.score_adjusted >= 50 %}status-average{% else %}status-slow{% endif %}"
+                      title="{{ log.device_wifi_standard }} adapter">
+                    {{ log.score_adjusted }}
+                </span>
+                {% else %}
+                <span style="color: #999;">&mdash;</span>
+                {% endif %}
             </td>
             <td>
 						<span class="time-ago"

@@ -1,0 +1,23 @@
+# Template used by `python passive_monitor.py install` on Linux - not meant to
+# be installed by hand. The installer fills in {{PYTHON}} and {{SCRIPT}},
+# writes the result to ~/.config/systemd/user/whyphy-monitor.service, then runs:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now whyphy-monitor
+#   loginctl enable-linger $USER
+#
+# enable-linger matters: systemd --user services normally stop when your last
+# login session ends. Lingering keeps them running with no session, which is
+# what makes "survives logout" actually true.
+
+[Unit]
+Description=WhyPhy passive connectivity monitor
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{PYTHON}} {{SCRIPT}} run
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
