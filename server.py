@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles
 from locations import CAMPUS_BUILDINGS
@@ -98,6 +98,14 @@ templates = Jinja2Templates(directory=templates_path)
 
 CONFIRMATION_THRESHOLD = 3  # BSSID votes needed before auto-resolution is trusted
 
+# speedtest-cli's get_best_server() records 3600 s for every latency probe that
+# fails, then averages 3 probes over 6: (3 * 3600 / 6) * 1000 = 1,800,000.0 ms.
+# So 1800000.0 isn't a measurement, it's "no speedtest server answered".
+# Anything above MAX_PLAUSIBLE_LATENCY_MS is rejected so older clients that
+# don't filter it themselves can't poison the averages.
+SPEEDTEST_FAILED_LATENCY_MS = 1_800_000.0
+MAX_PLAUSIBLE_LATENCY_MS = 10_000.0
+
 
 class WiFiData(BaseModel):
     location: str
@@ -116,6 +124,15 @@ class WiFiData(BaseModel):
     device_os: str | None = None
     device_wifi_standard: str | None = None
     source: str = "native"  # "native" (WhyPhy.py) or "web_lite"
+
+    @field_validator("latency")
+    @classmethod
+    def latency_must_be_real(cls, v):
+        if v <= 0 or v >= MAX_PLAUSIBLE_LATENCY_MS:
+            raise ValueError(
+                f"latency {v} ms is not a real measurement "
+                f"(speedtest-cli reports {SPEEDTEST_FAILED_LATENCY_MS} ms when every latency probe fails)")
+        return v
 
 
 class BSSIDVote(BaseModel):

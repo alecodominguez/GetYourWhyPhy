@@ -149,6 +149,12 @@ def _ping_once(host):
 def run_full_benchmark(building):
     """Same measurement pipeline as WhyPhy.py's interactive flow, no prompts."""
     download, upload, latency = WhyPhy.measure_speed()
+    # speedtest-cli returns 1800000.0 ms when none of its latency probes got a
+    # reply (3 x 3600 s / 6). That's a failed test, not a reading - skip it
+    # rather than uploading it (the server would reject it anyway).
+    if latency is None or latency <= 0 or latency >= 10_000:
+        print(f"[monitor] Skipping benchmark: latency {latency} ms means the speed test failed.")
+        return
     jitter = WhyPhy.measure_jitter()
     packet_loss = WhyPhy.measure_packet_loss()
     raw = {"download": download, "upload": upload, "latency": latency,
