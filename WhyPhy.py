@@ -309,6 +309,10 @@ def main():
     print("[1/3] Speed Test...")
     download, upload, latency = measure_speed()
 
+    if latency <= 0 or latency >= 10_000:
+      print("Speed test couldn't reach a server (latency check failed). Try again.")
+      return
+
     print("[2/3] Jitter...")
     jitter = measure_jitter()
 
