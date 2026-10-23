@@ -10,3 +10,10 @@ whyphy.app {
 www.whyphy.app {
     redir https://whyphy.app{uri} permanent
 }
+
+# Optional: if you want to keep alecodominguez.com alive as a personal
+# redirect to the new brand domain instead of letting it go dead:
+#
+# alecodominguez.com, www.alecodominguez.com {
+#     redir https://whyphy.app{uri} permanent
+# }

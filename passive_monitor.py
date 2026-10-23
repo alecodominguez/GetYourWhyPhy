@@ -1,6 +1,6 @@
 """
 File: passive_monitor.py
-Purpose: Passive Testing is a software revival of the original "IoT Ghost"
+Purpose: Passive Testing - a software revival of the original "IoT Ghost"
 idea, but running as a lightweight background process on a contributor's
 own machine instead of dedicated hardware. It does NOT run a full
 speedtest-cli throughput test on a loop (that would hammer both the
@@ -8,27 +8,43 @@ user's bandwidth and the speedtest.net servers); instead it does cheap,
 frequent liveness checks and only escalates to a full WhyPhy test
 occasionally.
 
+Consent and transparency (read this before deploying):
+  - This process must be something the user explicitly installed and can
+    see is running and can stop with one command. It must never be bundled
+    or started silently by the main WhyPhy.py CLI tool.
+  - It only ever measures NETWORK health (gateway reachability, latency to
+    a fixed public host). It does not inspect traffic, browsing activity,
+    DNS queries, or any other on-device activity - that would turn a
+    Wi-Fi mapping tool into something closer to spyware, which is out of
+    scope and something you should avoid regardless of user consent.
+  - Ship this as an opt-in, documented install step (see deploy/README),
+    with a visible way to check status ("whyphy-monitor status") and
+    uninstall it, not as something silently persisted.
+
 What it does:
-  1. Every CHECK_INTERVAL seconds ther is one ping to the default gateway.
-  2. If N consecutive pings fail it logs a "drop event" and, once connectivity
-  returns, reports the event to the server.
-  3. Every FULL_TEST_INTERVAL seconds (30min) it runs one real
-    WhyPhy.py-style benchmark, reusing the same measure_speed() and score
+  - Every CHECK_INTERVAL seconds: one ping to the default gateway.
+  - If N consecutive pings fail, logs a "drop event" (start/end timestamps)
+    and, once connectivity returns, reports the event to the server.
+  - Every FULL_TEST_INTERVAL seconds (default: 30 min): runs one real
+    WhyPhy.py-style benchmark, reusing the same measure_speed()/scoring
     pipeline, so passive data stays comparable to manually-submitted data.
 """
 import platform
 import subprocess
 import time
 from datetime import datetime, timezone
+
 import requests
+
 import WhyPhy  # reuse measure_speed / measure_jitter / scoring, no duplication
 import bssid_resolver
 from locations import get_standard_name
 
-CHECK_INTERVAL = 30           # 30 seconds between lightweight gateway pings
-FAILURE_THRESHOLD = 3         # 3 consecutive failed pings before we call it a "drop"
-FULL_TEST_INTERVAL = 30 * 60  # 30 minutes between full speedtest benchmarks
+CHECK_INTERVAL = 30           # seconds between lightweight gateway pings
+FAILURE_THRESHOLD = 3         # consecutive failed pings before we call it a "drop"
+FULL_TEST_INTERVAL = 30 * 60  # seconds between full speedtest benchmarks
 SERVER_BASE = "https://whyphy.app"
+
 
 def _default_gateway():
     system = platform.system()
@@ -60,6 +76,7 @@ def _ping_once(host):
     except Exception:
         return False
 
+
 def report_drop_event(started_at, ended_at, building):
     payload = {
         "building": building,
@@ -71,11 +88,12 @@ def report_drop_event(started_at, ended_at, building):
         requests.post(f"{SERVER_BASE}/log-drop", json=payload, timeout=5,
                        headers={"ngrok-skip-browser-warning": "true"})
     except requests.exceptions.RequestException:
-        pass
+        pass  # queue-for-later is a reasonable future improvement; kept simple here
+
 
 def run_full_benchmark(building):
     """Runs the same measurement pipeline as WhyPhy.py's interactive flow,
-    without prompting and is used for scheduled passive samples."""
+    without prompting - used for scheduled passive samples."""
     download, upload, latency = WhyPhy.measure_speed()
     jitter = WhyPhy.measure_jitter()
     packet_loss = WhyPhy.measure_packet_loss()
@@ -90,7 +108,6 @@ def run_full_benchmark(building):
 
 
 def main(building_override=None):
-    #Lets user know about this IoT process
     print("[WhyPhy Passive Monitor] Starting. Press Ctrl+C or run "
           "'whyphy-monitor stop' to end.")
 
@@ -135,6 +152,7 @@ def main(building_override=None):
             time.sleep(CHECK_INTERVAL)
     except KeyboardInterrupt:
         print("\n[WhyPhy Passive Monitor] Stopped.")
+
 
 if __name__ == "__main__":
     main()

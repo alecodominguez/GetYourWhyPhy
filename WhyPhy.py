@@ -10,6 +10,14 @@ finally apply them to a weighted scale to have an accurate final value of WiFi q
 prints the individual WiFi assesment report for the user to see. Lastly, we take the adapted raw
 data and export it to the server as a "request".
 
+CHANGELOG (this revision):
+  - Added BSSID capture to get_signal_info() so bssid_resolver.py can attempt
+    Automated Mapping before falling back to the manual building prompt.
+  - Added device_profile integration so the exported payload carries a
+    device-relative score alongside the original absolute score.
+  - export_to_server() now points at the whyphy.app deployment
+    instead of the ngrok tunnel (see deploy/README.md for the migration).
+
 requirements (install via conda/pip):
     1. clone the repository
     2. "cd [INSERT FILEPATH]"
@@ -75,7 +83,6 @@ def clamp(val, lo, hi):
     return max(lo, min(hi, val))
 
 
-# noinspection PyTypeChecker
 def score_metric(value, lo, hi):
     """ Linearly maps a raw measurement to a 0–100 scale. Formula: ((Value - Floor) / (Range)) * 100"""
     if hi == lo:
@@ -154,10 +161,10 @@ def measure_packet_loss(host="8.8.8.8", count=20):
 
 
 def get_signal_info():
-    """Returns ssid, signal, and bssid. BSSID is what powers the Automated Mapping
-    in bssid_resolver.py. It is the MAC address of the specific access point
+    """Returns (ssid, signal, bssid). BSSID is what powers Automated Mapping
+    in bssid_resolver.py - it's the MAC address of the specific access point
     radio the device is associated with, which stays fixed to a physical
-    location even though signal strength and SSID name changes."""
+    location even though signal strength and SSID name don't."""
     os_name = platform.system()
     ssid = "Unknown"
     signal = "N/A"
@@ -246,7 +253,7 @@ def export_to_server(data, location_name):
     """
         Sends the collected metrics to the FastAPI central server.
     """
-    # Replace with your actual server URL (e.g., your PythonAnywhere or Pi address)
+    # Migrated off the ngrok tunnel - see deploy/README.md for the DNS/TLS setup.
     URL = "https://whyphy.app/log-wifi"
     payload = {
         "location": location_name,
