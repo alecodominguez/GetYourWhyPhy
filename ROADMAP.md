@@ -214,22 +214,24 @@ are written out in `deploy/README.md` for you to run.
 
 ---
 
-## Suggested build order
+- **`covers_building`** - `GET /covers-building/{building}` (reverse BSSID
+  lookup) and `POST /admin/seed-bssid` (token-gated bootstrap for buildings
+  with no organic votes yet) in `server.py`.
+- **OS service wrapper** - `passive_monitor.py` is now a CLI (`run` /
+  `install` / `uninstall` / `status`). `install` registers a macOS
+  LaunchAgent, a Linux systemd `--user` unit (with `loginctl enable-linger`
+  so it survives full logout), or a Windows Scheduled Task, using the
+  templates in `client_service/`.
+- **Local drop-event queuing** - `LocalDropQueue` persists undelivered
+  `/log-drop` reports to `~/.whyphy/drop_queue.jsonl` and retries every tick.
+- **Tray/menu-bar indicator** - `tray_icon.py`, optional
+  (`pip install -r requirements-monitor.txt`); falls back to console output.
+- **`score_adjusted` in the UI** - new column in the recent-reports table and
+  a "device-adjusted avg" note on each building card in `templates/index.html`.
+- **WhyPhy Web Lite** - `/lite`, `templates/lite.html`, `static/lite.js`, and
+  `/ping`, `/speedtest-download`, `/speedtest-upload`. Scoring is plain JS
+  rather than compiled WebAssembly on purpose (see the comment in `lite.js`).
 
-Given the dependencies between these (remote hosting has to exist before
-the domain migration means anything; BSSID mapping and device profiling
-both just need the server changes deployed):
-
-1. **Remote hosting + domain migration (5, 6)** — everything else assumes
-   a stable server exists to talk to.
-2. **Automated Mapping (1)** — highest leverage for reducing user friction
-   per the paper's own evaluation findings (manual location entry was
-   flagged as a source of error).
-3. **Device Profiling (3)** — self-contained, no new infra, pairs well
-   with #1's data.
-4. **Passive Testing (2)** — needs the OS service wrapper work to be
-   genuinely usable rather than a script you have to remember to run.
-5. **WebAssembly / signed executables (4)** — this is really "fix the
-   install-time warning," and code-signing gets there faster and without
-   losing metrics; treat the WASM "Lite" version as optional polish after
-   that's solved.
+**Deployment note:** `WiFiLog` gained a `source` column. `create_all()` only
+creates missing tables, not columns, so the live database needs one manual
+`ALTER TABLE` before restarting - see `docs/UPDATING.md`.
