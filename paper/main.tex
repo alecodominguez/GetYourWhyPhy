@@ -120,7 +120,7 @@ Prior research often utilizes static sensors, such as Raspberry Pi nodes, placed
 The design of GetYourWhyPhy is centered on accessibility and data integrity, ensuring that any student can contribute meaningful data without specialized training.
 
 \subsection{Design Overview}
-The system follows a three-tier architecture: our Client Benchmarking Tool, the Server-Side Logic Layer, and the Web Frontend. The client side begins and ends with our Web Frontend User Interface (UI). The workflow begins when the user downloads a Python-based CLI tool that executes a standardized speed test using speedtest-cli. The resulting JSON payload—containing download speed, upload speed, latency, jitter, and packet loss—is transmitted via a REST API to a FAST API server. The server stores this data in a SQLite database, which feeds it back to the React-base leaderboard in the Web Frontend UI.
+The system follows a three-tier architecture: our Client Benchmarking Tool, the Server-Side Logic Layer, and the Web Frontend. The client side begins and ends with our Web Frontend User Interface (UI). The workflow begins when the user downloads a Python-based CLI tool that executes a standardized speed test using speedtest-cli. The resulting JSON payload—containing download speed, upload speed, latency, jitter, and packet loss—is transmitted via a REST API to a FAST API server. The server stores this data in a SQLite database, which feeds it back to the server-rendered (Jinja2) leaderboard in the Web Frontend UI.
 
 \begin{figure}[h]
   \centering
@@ -141,11 +141,11 @@ We initially sought to implement our project through ESP8266 microchips to run I
 Following the failed attempt to gather data from the ESP8266 microchips, we started developing the software to run and collect data using speedtest-cli. Researching alternatives led us to use the speedtest-cli library because it ensured a robust test which uses the native hardware and would allow us to view the results by implementing a TUI with progress bars and good structure. To provide a meaningful comparison between locations, the system implements a Normalized WhyPhy Score. This score condenses complex network metrics into a single, digestible value between 0 and 100. Our tool relies on the speedtest-cli library to provide standardized results across devices and use hardware to gather accurate WiFi information. Finally, we implement a server and Web Frontend for users to interact and visualize the data collected. The biggest challenges in implementation were writing our WhyPhy score in WhyPhy.py, building our database system in server.py, and developing our GetYourWhyPhy Frontend in index.html.
 
 \subsection{Module Implementation}
-The interaction begins with the user executing a speed test. The results are then transmitted via a Python-based server-side logic layer to a database that categorizes the data by building and time of the day.
+The interaction begins with the user executing a speed test. The results are then transmitted via a Python-based server-side logic layer to a database that stores each report with its building and a UTC timestamp, so results can be aggregated by building and by hour of the day (Arizona time).
 
 \begin{itemize}
 \item {\texttt{}}Benchmarking Module: The core benchmarking logic is implemented in Python, utilizing the speedtest-cli library to ensure standardized results. We chose this tool because it provides granular data beyond simple throughput, specifically capturing jitter and packet loss, which are critical for video conferencing stability.
-\item {\texttt{}}Normalization Module: To make the data actionable for non-technical users, we developed an algorithm to calculate the WhyPhy Score. This score weighs download speed (50\%), latency (30\%), and upload speed (20\%), while applying a penalty multiplier for jitter exceeding 30ms or any detected packet loss.
+\item {\texttt{}}Normalization Module: To make the data actionable for non-technical users, we developed an algorithm to calculate the WhyPhy Score. This score is a linear weighted sum of five normalized sub-scores: download speed (35\%), latency (30\%), upload speed (20\%), jitter (10\%), and packet loss (5\%). There is no separate penalty multiplier; jitter and packet loss lower the score only through their weighted sub-scores. If a metric could not be measured, it is excluded and the remaining weights are renormalized to sum to 100\%. The server recomputes the score from the raw metrics rather than trusting the client's value.
 \item {\texttt{}}Visualization Module: The frontend was designed using a "Leaderboard" metaphor. This encourages community participation by highlighting the "best" buildings for Wi-Fi, while also providing a search interface for users to look up specific classrooms before attending a lecture.
 \end{itemize}
 
@@ -156,7 +156,7 @@ The interaction begins with the user executing a speed test. The results are the
 \end{figure}
 
 \subsection{Data Collection and Scoring Algorithm}
-Benchmarks are performed using a customized implementation of speedtest-cli. This allows for the collection of five core metrics. The scoring logic prioritizes download speed and latency while penalizing high jitter and packet loss. The score is a weighted sum of five normalized sub-scores reflecting what users care about most when evaluating a connection: 
+Benchmarks are performed using a customized implementation of speedtest-cli. This allows for the collection of five core metrics. The scoring logic prioritizes download speed and latency, while jitter and packet loss carry smaller weights. The score is a weighted sum of five normalized sub-scores reflecting what users care about most when evaluating a connection: 
 
 \begin{itemize}
 \item {\texttt{Download Speed (35\%)}}: Throughput from the server to the client. The highest weight, as most student use cases involve consuming content like loading slides or streaming lectures.
@@ -177,12 +177,12 @@ Each metric is converted to a 0–100 value using linear mapping. For metrics wh
 
 $$score = clamp\left(\frac{value - floor}{ceiling - floor} \times 100, 0, 100\right)$$
 
-For inverted metrics (Latency, Jitter, Packet Loss), the axis is flipped so that the best-case value (e.g., 5ms latency) maps to 100 . These scores then map to intuitive letter grades, where 90+ is an A+ and scores below 45 result in an F.
+For inverted metrics (Latency, Jitter, Packet Loss), the axis is flipped so that the best-case value (e.g., 5ms latency) maps to 100 . These scores then map to intuitive letter grades, where 90+ is an A+ and scores below 45 result in an F. Note that ``normalization'' here means min--max scaling of each metric to a common range; it is unrelated to the database normal forms (1NF--BCNF) used to design the schema.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=\linewidth]{figures/normalizationCalculationFigure.png}
-  \caption{Normalization Logic Flow. The mathematical translation stack used by the normalization module to convert multi-dimensional network data into a single intuitive metric. The algorithmic matrix processes highly asymmetric variables and balances them using weight coefficients. The engine actively applies exponential deduction penalties when stability bounds breaks, outputting a standardized value between 0 and 100.}
+  \caption{Normalization Logic Flow. The mathematical translation stack used by the normalization module to convert multi-dimensional network data into a single intuitive metric. The algorithm maps each metric onto a common 0--100 scale and combines them using fixed weight coefficients, outputting a standardized value between 0 and 100.}
 \end{figure}
 
 \subsection{Implementing WhyPhy.py}

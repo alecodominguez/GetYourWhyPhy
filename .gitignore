@@ -6,4 +6,5 @@ build/
 dist/
 .DS_Store
 .env
-.vscode/
+.vscode/*.bak
+data/legacy_bssid_review.csv

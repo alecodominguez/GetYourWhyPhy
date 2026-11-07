@@ -10,7 +10,15 @@ finally apply them to a weighted scale to have an accurate final value of WiFi q
 prints the individual WiFi assesment report for the user to see. Lastly, we take the adapted raw
 data and export it to the server as a "request".
 
-CHANGELOG (this revision):
+CHANGELOG (Nov 2026, data-quality pass):
+  - measure_jitter() parsed only the last ping line, so jitter was always 0.0.
+  - measure_packet_loss() returned the packet COUNT (20) on macOS/Linux.
+  - Removed the extra /vote-bssid call: /log-wifi already records the vote,
+    so each run was counted as two confirmations.
+  - Payload now carries an anonymous contributor_id and client_version.
+  - Scoring moved to scoring.py (shared with the server).
+
+CHANGELOG (previous revision):
   - Added BSSID capture to get_signal_info() so bssid_resolver.py can attempt
     Automated Mapping before falling back to the manual building prompt.
   - Added device_profile integration so the exported payload carries a
@@ -41,8 +49,10 @@ import locations  # Verify the location is on campus
 import os
 import certifi
 
-import bssid_resolver     # NEW: Automated Mapping
-import device_profile     # NEW: Device Profiling
+import bssid_resolver     # Automated Mapping
+import contributor        # anonymous per-install ID (for one-vote-per-contributor)
+import device_profile     # Device Profiling
+import scoring
 
 # fix to set the SSL certificate path to the one provided by the certifi bundle
 os.environ['SSL_CERT_FILE'] = certifi.where()
@@ -56,40 +66,16 @@ except ImportError:
         "Missing dependency. Install all dependencies by running ")
     raise SystemExit(1)
 
-# SCORING WEIGHTS
-# determine how much each metric affects the final 0–100 linear score.
-# We focus on Download and Latency
-WEIGHTS = {
-    "download": 35,  # Mbps, more weight
-    "upload": 20,  # Mbps
-    "latency": 30,  # ms (Lower is better), more weight
-    "jitter": 10,  # ms (Consistency), low weight but crucial to define good and bad signal
-    "packet_loss": 5,  # %  (Reliability)
-}
+# SCORING
+# Weights, thresholds and the 0-100 linear mapping now live in scoring.py so the
+# client, the passive monitor and the server all use one definition (the
+# server recomputes the stored score from the raw metrics).
+from scoring import WEIGHTS, THRESHOLDS, clamp, score_metric  # noqa: E402  (re-exported)
 
-# Thresholds define the range for each metric to keep it within 100 points
-# For latency/jitter/loss, the values are reversed (e.g., 500ms is 0 points, 5ms is 100 points).
-THRESHOLDS = {
-    "download": (0, 200),
-    "upload": (0, 100),
-    "latency": (500, 5),
-    "jitter": (100, 0),
-    "packet_loss": (100, 0),
-}
-
-# MATHEMATICAL HELPERS
-def clamp(val, lo, hi):
-    """Ensures a number stays within a specific range (eg. prevents a score of 110/100)."""
-    return max(lo, min(hi, val))
-
-
-def score_metric(value, lo, hi):
-    """ Linearly maps a raw measurement to a 0–100 scale. Formula: ((Value - Floor) / (Range)) * 100"""
-    if hi == lo:
-        return 0
-    ratio = (value - lo) / (hi - lo)
-    return round(clamp(ratio * 100, 0, 100), 1)
-
+# Bumped whenever the measurement code changes in a way the server should know
+# about. 2 = jitter/packet-loss parsing fixed (Nov 2026); clients that send no
+# version are treated as having the old parsing bugs.
+CLIENT_VERSION = 2
 
 # NETWORK MEASUREMENT FUNCTIONS
 def measure_speed():
@@ -105,8 +91,16 @@ def measure_speed():
 
 def measure_jitter(host="8.8.8.8", count=10):
     """
-    Calculates Jitter by measuring the standard deviation of Ping responses.
-    High Jitter = unstable connection (bad for voice calls).
+    Jitter = standard deviation of the individual ping round-trip times.
+    High jitter = unstable connection (bad for voice/video calls).
+
+    Returns None (not 0.0) when fewer than 2 replies could be parsed, so a
+    failed measurement is never scored as perfect jitter.
+
+    Bug fix (Nov 2026): the marker loop used to sit OUTSIDE the
+    `for line in lines` loop, so only the last line of ping output (the summary,
+    which never contains "time=") was checked. rtts was always empty and every
+    native report was sent with jitter = 0.0.
     """
     system = platform.system()
     # OS Command variation: Windows uses '-n', Unix uses '-c'
@@ -114,50 +108,40 @@ def measure_jitter(host="8.8.8.8", count=10):
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        lines = result.stdout.splitlines()
-        rtts = []
-
-        # Regex-less parsing: looks for 'time=' in the ping output strings
-        for line in lines:
-            line_lower = line.lower()
-        for marker in ["time=", "time<"]:
-            if marker in line_lower:
-                idx = line_lower.index(marker) + len(marker)
-                num = "".join(ch for ch in line[idx:] if ch.isdigit() or ch == ".")
-                if num:
-                    rtts.append(float(num))
-
-        if len(rtts) < 2:
-            return 0.0
-
-        # Standard Deviation calculation for Jitter
-        mean = sum(rtts) / len(rtts)
-        variance = sum((r - mean) ** 2 for r in rtts) / len(rtts)
-        return round(variance ** 0.5, 2)
     except Exception:
-        return 0.0
+        return None
+
+    # Matches "time=12.3 ms" (macOS/Linux), "time=12ms" and "time<1ms" (Windows)
+    rtts = [float(m) for m in re.findall(r"time[=<]\s*([\d.]+)", result.stdout.lower())]
+    if len(rtts) < 2:
+        return None
+
+    mean = sum(rtts) / len(rtts)
+    variance = sum((r - mean) ** 2 for r in rtts) / len(rtts)
+    return round(variance ** 0.5, 2)
 
 
 def measure_packet_loss(host="8.8.8.8", count=20):
-    """Runs a longer ping test to see if any data packets were dropped entirely."""
+    """
+    Runs a longer ping test and returns the % of packets lost, or None if the
+    summary line couldn't be parsed.
+
+    Bug fix (Nov 2026): the old parser returned the FIRST number on the
+    summary line. On macOS/Linux that line is "20 packets transmitted, 20
+    received, 0.0% packet loss", so it returned 20.0 (the packet count) every
+    time. Windows ("Lost = 0 (0% loss)") happened to work. Now we read the
+    number directly in front of the "%".
+    """
     system = platform.system()
     cmd = ["ping", "-n" if system == "Windows" else "-c", str(count), host]
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        output = result.stdout.lower()
-        # Searches the summary text for the percentage of lost packets
-        for line in output.splitlines():
-            if "loss" in line or "lost" in line:
-                for word in line.split():
-                    word = word.strip("(%)")
-                    try:
-                        return round(float(word), 1)
-                    except ValueError:
-                        continue
-        return 0.0
     except Exception:
-        return 0.0
+        return None
+
+    m = re.search(r"([\d.]+)%\s*(?:packet\s+)?loss", result.stdout.lower())
+    return round(float(m.group(1)), 1) if m else None
 
 
 def get_signal_info():
@@ -249,36 +233,43 @@ def grade(score):
     return "F", "Very Poor"
 
 
-def export_to_server(data, location_name):
+def export_to_server(data, location_name, source="native"):
     """
-        Sends the collected metrics to the FastAPI central server.
+    Sends the collected metrics to the FastAPI central server.
+
+    The server records the BSSID -> building vote itself from this one request
+    (once per contributor per BSSID), so there is no separate /vote-bssid call
+    any more. Sending both used to count every run as two confirmations.
     """
-    # Migrated off the ngrok tunnel - see deploy/README.md for the DNS/TLS setup.
     URL = "https://whyphy.app/log-wifi"
     payload = {
         "location": location_name,
         "download": data["download"],
         "upload": data["upload"],
         "latency": data["latency"],
-        "jitter": data["jitter"],
-        "packet_loss": data["packet_loss"],
-        "score": data["score"],
+        "jitter": data["jitter"],            # None = couldn't be measured
+        "packet_loss": data["packet_loss"],  # None = couldn't be measured
+        "score": data["score"],              # informational; server recomputes
         "ssid": data["ssid"],
         "bssid": data.get("bssid"),
         "score_adjusted": data.get("score_adjusted"),
         "device_os": data.get("device_os"),
         "device_wifi_standard": data.get("device_wifi_standard"),
+        "contributor_id": contributor.get_contributor_id(),
+        "client_version": CLIENT_VERSION,
+        "source": source,
     }
 
     try:
         response = requests.post(URL, json=payload, timeout=10)
-        # Parse the JSON response from your FastAPI server
-        server_response = response.json()
+        try:
+            server_response = response.json()
+        except ValueError:
+            server_response = {}
         if response.status_code == 200 and server_response.get("status") == "success":
             print(f"\n[✓] Data successfully synced to central database.")
-        elif server_response.get("status") == "error":
-            # catches the "Invalid Location" message from server function log_WiFi
-            print(f"\n[!] Rejected: {server_response.get('message')}")
+        elif response.status_code in (400, 422):
+            print(f"\n[!] Rejected: {server_response.get('detail')}")
         else:
             print(f"\n[!] Server error: {response.status_code}")
 
@@ -319,25 +310,21 @@ def main():
     print("[3/3] Packet Loss...")
     packet_loss = measure_packet_loss()
 
-    # 3. Scoring Logic
+    # 3. Scoring Logic (shared with the server via scoring.py; a metric that
+    # couldn't be measured is left out and the remaining weights renormalised)
     raw_data = {
         "download": download, "upload": upload,
         "latency": latency, "jitter": jitter, "packet_loss": packet_loss
     }
 
-    sub_scores = {m: score_metric(raw_data[m], *THRESHOLDS[m]) for m in raw_data}
-    total = round(sum(sub_scores[m] * WEIGHTS[m] / 100 for m in WEIGHTS), 1)
+    sub_scores = scoring.sub_scores(raw_data)
+    total = scoring.weighted_total(sub_scores)
     letter, label = grade(total)
 
-    # NEW: Device Profiling - device-relative score, shown alongside (never
+    # Device Profiling - device-relative score, shown alongside (never
     # instead of) the absolute score so the leaderboard stays comparable.
     profile = device_profile.get_device_profile()
-    adjusted_download = device_profile.adjusted_download_score(download, profile["wifi_standard"])
-    score_adjusted = None
-    if adjusted_download is not None:
-        adjusted_sub_scores = dict(sub_scores)
-        adjusted_sub_scores["download"] = adjusted_download
-        score_adjusted = round(sum(adjusted_sub_scores[m] * WEIGHTS[m] / 100 for m in WEIGHTS), 1)
+    score_adjusted = scoring.compute_adjusted_score(raw_data, profile["wifi_standard"])
 
     # 4. Final Report Output
     SEP = "═" * 58
@@ -348,14 +335,17 @@ def main():
         "download": ("Download Speed", f"{download} Mbps"),
         "upload": ("Upload Speed", f"{upload} Mbps"),
         "latency": ("Latency (Ping)", f"{latency} ms"),
-        "jitter": ("Jitter", f"{jitter} ms"),
-        "packet_loss": ("Packet Loss", f"{packet_loss}%"),
+        "jitter": ("Jitter", f"{jitter} ms" if jitter is not None else "n/a"),
+        "packet_loss": ("Packet Loss", f"{packet_loss}%" if packet_loss is not None else "n/a"),
     }
 
     # The loop that brings back the [███░░] bars
     for metric, (name, measured) in display_labels.items():
-        s = sub_scores[metric]
         w = WEIGHTS[metric]
+        if metric not in sub_scores:
+            print(f"  {name:<18} {measured:>12}   (not measured - left out of the score, weight {w}%)")
+            continue
+        s = sub_scores[metric]
         print(f"  {name:<18} {measured:>12}   [{bar(s, 20)}] {s:5.1f}/100  (weight {w}%)")
 
     print(SEP)
@@ -378,10 +368,10 @@ def main():
         export_data["device_os"] = profile["os"]
         export_data["device_wifi_standard"] = profile["wifi_standard"]
 
+        # /log-wifi also records this run as this contributor's BSSID vote.
         export_to_server(export_data, matched_building)
-
-        # Feed the confirmed building back into the BSSID registry as a vote
-        bssid_resolver.submit_bssid_vote(bssid, matched_building)
+    else:
+        print(f"\n[!] '{location_name}' isn't a recognized UofA building, so this run wasn't uploaded.")
 
     # keeps terminal open so user can view personalized report
     input("\nPress Enter to close this window...")

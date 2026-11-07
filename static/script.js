@@ -20,7 +20,9 @@ function updateTime() {
 
     elements.forEach(el => {
         const timestamp = el.getAttribute('data-timestamp');
-        // checks the timestamp is parsed correctly
+        // The server sends UTC with a trailing "Z" (see utc_iso in server.py).
+        // Without the Z, browsers parse it as LOCAL time and every report
+        // looked 7 hours newer than it was in Arizona.
         const recordDate = new Date(timestamp);
         const diff = Math.floor((now - recordDate) / 1000);
 

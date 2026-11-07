@@ -27,15 +27,10 @@ import subprocess
 
 import psutil
 
-# Theoretical max PHY throughput (Mbps) per Wi-Fi generation, single-stream
-# real-world achievable figure (not the marketing "up to X Gbps" number).
-WIFI_STANDARD_CEILINGS = {
-    "802.11n": 150,     # Wi-Fi 4
-    "802.11ac": 433,    # Wi-Fi 5
-    "802.11ax": 600,    # Wi-Fi 6 / 6E (conservative single-stream figure)
-    "802.11be": 1000,   # Wi-Fi 7
-    "unknown": None,
-}
+# Ceilings and the device-relative download score now live in scoring.py so the
+# server can recompute score_adjusted without importing psutil. Re-exported
+# here so existing callers keep working.
+from scoring import WIFI_STANDARD_CEILINGS, adjusted_download_score  # noqa: E402,F401
 
 
 def _run(cmd):
@@ -113,21 +108,6 @@ def get_device_profile():
         "ram_gb": ram_gb,
         "wifi_standard": get_wifi_standard(),
     }
-
-
-def adjusted_download_score(download_mbps, wifi_standard, floor=0):
-    """
-    Returns a 0-100 score for download throughput RELATIVE to what this
-    device's Wi-Fi standard can theoretically achieve, instead of the
-    fixed 0-200 Mbps scale used for the absolute score. Returns None
-    (meaning: "no adjustment, use the absolute score as-is") when the
-    standard is unknown, so we never fabricate an adjustment.
-    """
-    ceiling = WIFI_STANDARD_CEILINGS.get(wifi_standard)
-    if not ceiling:
-        return None
-    ratio = (download_mbps - floor) / (ceiling - floor)
-    return round(max(0, min(100, ratio * 100)), 1)
 
 
 if __name__ == "__main__":

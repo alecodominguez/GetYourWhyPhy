@@ -215,12 +215,11 @@
             {% endfor %}
     </datalist>
 
-    <section class="leaderboard-section">
-        <h2>Building Averages</h2>
-        {% if building_stats %}
+    {# Each card is an average of per-contributor averages (see LEADERBOARD_SQL
+       in server.py), so one person running many tests counts once. #}
+    {% macro stat_cards(stats) %}
         <div class="stats-grid">
-            {% for stat in building_stats %}
-            {# 1. Define variables here to avoid editor errors in the style tag #}
+            {% for stat in stats %}
             {% set score = stat.avg_score|default(0) %}
             {% set adjusted = stat.avg_score_adjusted %}
             {% set bar_color = "#28a745" if score >= 80 else "#ffc107" if score >= 50 else "#dc3545" %}
@@ -228,7 +227,7 @@
             <div class="average-card">
                 <div style="flex-grow: 1; margin-right: 20px;">
                     <strong>{{ stat.location }}</strong>
-                    <small>({{ stat.test_count }} reports)</small>
+                    <small>({{ stat.test_count }} report{{ "s" if stat.test_count != 1 }} from {{ stat.contributor_count }} contributor{{ "s" if stat.contributor_count != 1 }})</small>
                     {% if adjusted is not none %}
                     <small class="adjusted-note" title="Average score after adjusting for each contributor's Wi-Fi hardware generation.">
                         &middot; device-adjusted avg: {{ "%.1f"|format(adjusted) }}
@@ -247,6 +246,19 @@
             </div>
             {% endfor %}
         </div>
+    {% endmacro %}
+
+    <section class="leaderboard-section">
+        <h2>Building Averages</h2>
+        {% if native_stats or lite_stats %}
+            {% if native_stats %}
+            <h3>WhyPhy client <small>(measured against the nearest speedtest.net server)</small></h3>
+            {{ stat_cards(native_stats) }}
+            {% endif %}
+            {% if lite_stats %}
+            <h3>Web Lite <small>(browser test to whyphy.app &mdash; a different network path, so ranked separately)</small></h3>
+            {{ stat_cards(lite_stats) }}
+            {% endif %}
         {% else %}
         <p>No campus data collected yet. Be the first to submit a report!</p>
         {% endif %}
@@ -276,9 +288,14 @@
             <td>{{ log.upload }} Mbps</td>
             <td>{{ log.latency }} ms</td>
             <td>
-						<span class="badge {% if log.score >= 80 %}status-fast{% elif log.score >= 50 %}status-average{% else %}status-slow{% endif %}">
+						{% if log.score is not none %}
+						<span class="badge {% if log.score >= 80 %}status-fast{% elif log.score >= 50 %}status-average{% else %}status-slow{% endif %}"
+						      {% if log.jitter_valid == false or log.packet_loss_valid == false %}title="Scored without {{ 'jitter' if log.jitter_valid == false }}{{ ' and ' if log.jitter_valid == false and log.packet_loss_valid == false }}{{ 'packet loss' if log.packet_loss_valid == false }}: that measurement was unreliable on this client version."{% endif %}>
 							{{ log.score }}
 						</span>
+						{% else %}
+						<span style="color: #999;">&mdash;</span>
+						{% endif %}
             </td>
             <td>
                 {% if log.score_adjusted is not none %}
@@ -292,8 +309,8 @@
             </td>
             <td>
 						<span class="time-ago"
-                              data-timestamp="{{ log.timestamp.isoformat() if log.timestamp else '' }}">
-							{{ log.timestamp }}
+                              data-timestamp="{{ log.timestamp|utc_iso }}">
+							{{ log.timestamp|utc_iso }}
 						</span>
             </td>
         </tr>

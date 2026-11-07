@@ -22,7 +22,7 @@ What `run` does:
   - Every CHECK_INTERVAL seconds: one ping to the default gateway.
   - FAILURE_THRESHOLD consecutive failures = a "drop event"; when connectivity
     returns it is reported to the server. If the server is unreachable, the
-    event is queued locally (LocalDropQueue) and retried every tick.
+    event is queued in a local SQLite file (LocalDropQueue) and retried every tick.
   - Every FULL_TEST_INTERVAL seconds: one full WhyPhy benchmark, reusing
     WhyPhy.py's measurement and scoring so passive data stays comparable.
 """
@@ -30,6 +30,7 @@ import argparse
 import getpass
 import json
 import platform
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -42,6 +43,9 @@ import requests
 
 import WhyPhy
 import bssid_resolver
+import contributor
+import device_profile
+import scoring
 from locations import get_standard_name
 
 CHECK_INTERVAL = 30           # seconds between lightweight gateway pings
@@ -50,7 +54,8 @@ FULL_TEST_INTERVAL = 30 * 60  # seconds between full benchmarks
 SERVER_BASE = "https://whyphy.app"
 
 WHYPHY_HOME = Path.home() / ".whyphy"
-QUEUE_FILE = WHYPHY_HOME / "drop_queue.jsonl"
+QUEUE_DB = WHYPHY_HOME / "drop_queue.db"
+LEGACY_QUEUE_FILE = WHYPHY_HOME / "drop_queue.jsonl"   # pre-Nov-2026 format, imported once
 LOG_DIR = WHYPHY_HOME / "logs"
 
 SERVICE_NAME = "com.whyphy.monitor"     # macOS launchd label
@@ -62,51 +67,79 @@ WINDOWS_TASK_NAME = "WhyPhyMonitor"     # Windows Task Scheduler task
 # Local drop-event queue (survives the WhyPhy server being unreachable)
 # ---------------------------------------------------------------------------
 class LocalDropQueue:
-    """One JSON object per line in ~/.whyphy/drop_queue.jsonl - easy to inspect
-    by hand. Every loop tick tries to flush it, so a queued event is delivered
-    within one CHECK_INTERVAL of the server coming back."""
+    """Drop events waiting to reach the server, in a local SQLite file
+    (~/.whyphy/drop_queue.db).
 
-    def __init__(self, path=QUEUE_FILE):
+    This used to be a JSON-lines file that flush() rewrote in place, which had
+    two problems a DBMS solves for free:
+      - Durability: a crash or power loss mid-rewrite could truncate the file
+        and lose every queued event. SQLite commits are atomic.
+      - Duplicates: the same event could be queued twice. The primary key
+        (building, started_at) makes enqueue idempotent. The server enforces
+        the same natural key, so a POST that succeeded but timed out before we
+        saw the 200 is rejected as a duplicate on retry instead of stored twice.
+
+    Any events left in the old drop_queue.jsonl are imported on first use.
+    """
+
+    def __init__(self, path=QUEUE_DB, legacy_path=LEGACY_QUEUE_FILE):
         self.path = path
+        self.legacy_path = legacy_path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS drop_queue (
+                    building   TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    payload    TEXT NOT NULL,
+                    PRIMARY KEY (building, started_at)
+                )""")
+        self._import_legacy_jsonl()
+
+    def _connect(self):
+        return sqlite3.connect(self.path, timeout=10)
+
+    def _import_legacy_jsonl(self):
+        if not self.legacy_path.exists():
+            return
+        for line in self.legacy_path.read_text().splitlines():
+            try:
+                self.enqueue(json.loads(line))
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+        self.legacy_path.rename(self.legacy_path.with_suffix(".jsonl.imported"))
 
     def enqueue(self, payload):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.path, "a") as f:
-            f.write(json.dumps(payload) + "\n")
+        with self._connect() as conn:  # `with` = one atomic transaction
+            conn.execute(
+                "INSERT OR IGNORE INTO drop_queue (building, started_at, payload) VALUES (?, ?, ?)",
+                (payload["building"], payload["started_at"], json.dumps(payload)))
 
     def flush(self):
         """Resend every queued event. Returns (sent, still_queued)."""
-        if not self.path.exists():
-            return 0, 0
-        lines = [l for l in self.path.read_text().splitlines() if l.strip()]
-        if not lines:
-            return 0, 0
-
-        still_queued, sent = [], 0
-        for line in lines:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT building, started_at, payload FROM drop_queue").fetchall()
+        sent = 0
+        for building, started_at, payload in rows:
             try:
-                payload = json.loads(line)
-            except json.JSONDecodeError:
-                continue  # drop an unparseable line rather than retry it forever
-            try:
-                resp = requests.post(f"{SERVER_BASE}/log-drop", json=payload, timeout=5)
-                if resp.status_code == 200:
-                    sent += 1
-                else:
-                    still_queued.append(line)
+                resp = requests.post(f"{SERVER_BASE}/log-drop", json=json.loads(payload), timeout=5)
             except requests.exceptions.RequestException:
-                still_queued.append(line)
-
-        if still_queued:
-            self.path.write_text("\n".join(still_queued) + "\n")
-        else:
-            self.path.unlink(missing_ok=True)
-        return sent, len(still_queued)
+                continue  # server unreachable: keep it, retry next tick
+            if resp.status_code == 200 or 400 <= resp.status_code < 500:
+                # 200 = stored (or already stored: the server dedupes).
+                # 4xx = the server will never accept it (e.g. unknown
+                # building), so retrying forever would just spin.
+                if resp.status_code != 200:
+                    print(f"[!] Server rejected queued drop event ({resp.status_code}); discarding it.")
+                with self._connect() as conn:
+                    conn.execute("DELETE FROM drop_queue WHERE building = ? AND started_at = ?",
+                                 (building, started_at))
+                sent += resp.status_code == 200
+        return sent, self.pending_count()
 
     def pending_count(self):
-        if not self.path.exists():
-            return 0
-        return len([l for l in self.path.read_text().splitlines() if l.strip()])
+        with self._connect() as conn:
+            return conn.execute("SELECT COUNT(*) FROM drop_queue").fetchone()[0]
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +180,13 @@ def _ping_once(host):
 
 
 def run_full_benchmark(building):
-    """Same measurement pipeline as WhyPhy.py's interactive flow, no prompts."""
+    """Same measurement pipeline as WhyPhy.py's interactive flow, no prompts.
+
+    Uploaded with source="passive" so the server can tell scheduled monitor
+    runs apart from human-initiated ones: passive runs don't count as BSSID
+    votes, and the leaderboard averages per contributor first, so one monitor
+    running every 30 minutes counts as one contributor, not ~48 reports a day.
+    """
     download, upload, latency = WhyPhy.measure_speed()
     # speedtest-cli returns 1800000.0 ms when none of its latency probes got a
     # reply (3 x 3600 s / 6). That's a failed test, not a reading - skip it
@@ -155,16 +194,18 @@ def run_full_benchmark(building):
     if latency is None or latency <= 0 or latency >= 10_000:
         print(f"[monitor] Skipping benchmark: latency {latency} ms means the speed test failed.")
         return
-    jitter = WhyPhy.measure_jitter()
-    packet_loss = WhyPhy.measure_packet_loss()
     raw = {"download": download, "upload": upload, "latency": latency,
-           "jitter": jitter, "packet_loss": packet_loss}
-    sub_scores = {m: WhyPhy.score_metric(raw[m], *WhyPhy.THRESHOLDS[m]) for m in raw}
-    raw["score"] = round(sum(sub_scores[m] * WhyPhy.WEIGHTS[m] / 100 for m in WhyPhy.WEIGHTS), 1)
+           "jitter": WhyPhy.measure_jitter(), "packet_loss": WhyPhy.measure_packet_loss()}
+    profile = device_profile.get_device_profile()
+    payload = dict(raw)
+    payload["score"] = scoring.compute_score(raw)
+    payload["score_adjusted"] = scoring.compute_adjusted_score(raw, profile["wifi_standard"])
+    payload["device_os"] = profile["os"]
+    payload["device_wifi_standard"] = profile["wifi_standard"]
     ssid, _, bssid = WhyPhy.get_signal_info()
-    raw["ssid"] = ssid
-    raw["bssid"] = bssid
-    WhyPhy.export_to_server(raw, building)
+    payload["ssid"] = ssid
+    payload["bssid"] = bssid
+    WhyPhy.export_to_server(payload, building, source="passive")
 
 
 # ---------------------------------------------------------------------------
@@ -197,12 +238,17 @@ class Monitor:
     def report_drop_event(self, started_at, ended_at, building):
         payload = {
             "building": building,
+            "contributor_id": contributor.get_contributor_id(),
             "started_at": started_at.isoformat(),
             "ended_at": ended_at.isoformat(),
             "duration_seconds": (ended_at - started_at).total_seconds(),
         }
         try:
-            if requests.post(f"{SERVER_BASE}/log-drop", json=payload, timeout=5).status_code == 200:
+            status = requests.post(f"{SERVER_BASE}/log-drop", json=payload, timeout=5).status_code
+            if status == 200:
+                return
+            if 400 <= status < 500:
+                print(f"[!] Server rejected drop event ({status}); not queuing it.")
                 return
         except requests.exceptions.RequestException:
             pass

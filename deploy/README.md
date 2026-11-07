@@ -99,3 +99,34 @@ control plane - Layer 1 does everything these do and more, more securely.
   to be rebuilt and re-uploaded after the code changes above.
 - The `downloads/` links on the frontend itself keep working as-is since
   they're relative paths (`/downloads/...`) served by the same app.
+
+## Database migrations (Nov 2026 data-quality pass)
+
+`server.py` runs `migrations.upgrade()` at startup, so a normal push-to-deploy
+migrates the live database. For each pending migration it:
+
+1. Backs up the DB to `data/campus_wifi.db.pre-v<N>-<timestamp>.bak`.
+2. Applies the change in a single transaction (all or nothing).
+3. Records it in the `schema_migrations` table so it never runs twice.
+
+Migration v1 adds `contributors`, `bssid_votes` and `bssid_seeds`; flags the
+jitter/packet-loss values that the old client mis-measured; recomputes `score`
+from the raw metrics; removes duplicate drop events and adds a unique index;
+and renames `bssid_mappings` to `bssid_mappings_legacy` (each old mapping
+becomes one vote). Mappings that used to count as confirmed are written to
+`data/legacy_bssid_review.csv`; re-seed the ones you know are right with
+`POST /admin/seed-bssid`.
+
+To preview it against a copy first:
+```bash
+scp whyphy@whyphy.app:/opt/GetYourWhyPhy/data/campus_wifi.db /tmp/copy.db
+python migrations.py /tmp/copy.db --dry-run
+```
+Check the log after deploying with `journalctl -u whyphy | grep migrations`.
+To roll back, stop the service, copy the `.bak` over `campus_wifi.db`, and
+deploy the previous commit.
+
+**Rebuild the download zips** (`downloads/WhyPhy_Mac.zip`, `WhyPhy_Windows.zip`)
+after this change. Old clients still upload fine, but their jitter and
+packet-loss values get flagged and they can't cast BSSID votes, because they
+don't send a `contributor_id`.

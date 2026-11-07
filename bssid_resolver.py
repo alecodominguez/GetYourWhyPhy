@@ -14,18 +14,31 @@ netsh / system_profiler / nmcli calls WhyPhy.py already uses for SSID),
 which is what get_bssid() below does.
 
 Crowdsourced trust model:
-  - A BSSID is only auto-applied once it has reached CONFIRMATION_THRESHOLD
-    independent confirmations for the *same* building. Below that, the user
+  - A BSSID is only auto-applied once CONFIRMATION_THRESHOLD *distinct
+    contributors* (anonymous per-install IDs, see contributor.py) have voted
+    for the same building. The server enforces one vote per contributor per
+    BSSID with a UNIQUE constraint, and the threshold lives on the server. Below that, the user
     is still asked to type/confirm their building, and that answer is sent
     up as a vote.
   - This prevents one mistyped location (or one malicious submission) from
     silently mislabeling an access point for everyone else.
 """
+import json
+import os
+import time
+from pathlib import Path
+
 import requests
 
+import contributor
+
 SERVER_BASE = "https://whyphy.app"
-CACHE_FILE = "bssid_cache.json"
-CONFIRMATION_THRESHOLD = 3
+# Absolute path under ~/.whyphy (it used to be a bare "bssid_cache.json", which
+# landed in whatever directory the script happened to be launched from).
+CACHE_FILE = Path.home() / ".whyphy" / "bssid_cache.json"
+# The cache is a copy of server data, so it has to expire: a mapping can be
+# corrected on the server (re-votes, an admin re-seed) after we cached it.
+CACHE_TTL_SECONDS = 7 * 24 * 3600
 
 
 def get_bssid():
@@ -70,71 +83,89 @@ def get_bssid():
 
 
 def _load_cache():
-    import json
-    import os
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE) as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
+    try:
+        with open(CACHE_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
 
 
 def _save_cache(cache):
-    import json
+    """Write to a temp file then atomically rename, so a crash mid-write
+    can't leave a half-written (unparseable) cache behind."""
     try:
-        with open(CACHE_FILE, "w") as f:
+        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = CACHE_FILE.with_suffix(".tmp")
+        with open(tmp, "w") as f:
             json.dump(cache, f)
-    except Exception:
+        os.replace(tmp, CACHE_FILE)
+    except OSError:
         pass
+
+
+def _cached_building(cache, bssid):
+    entry = cache.get(bssid)
+    # Old cache format stored a bare building string with no timestamp:
+    # treat it as expired so it gets re-validated against the server.
+    if isinstance(entry, dict) and time.time() - entry.get("fetched_at", 0) < CACHE_TTL_SECONDS:
+        return entry.get("building")
+    return None
 
 
 def resolve_building(bssid):
     """
     Looks up a BSSID against the server's crowdsourced registry.
-    Checks a local cache first (fast, works offline once seeded), then
-    falls back to a server round-trip. Returns None if unresolved -
-    caller should fall back to asking the user, exactly like today.
+    Uses a local cache entry if it is younger than CACHE_TTL_SECONDS, otherwise
+    asks the server. If the server is unreachable, a stale cache entry is still
+    better than nothing. Returns None if unresolved - caller falls back to
+    asking the user.
     """
     if not bssid:
         return None
 
     cache = _load_cache()
-    if bssid in cache:
-        return cache[bssid]
+    fresh = _cached_building(cache, bssid)
+    if fresh:
+        return fresh
 
     try:
-        resp = requests.get(
-            f"{SERVER_BASE}/resolve-bssid/{bssid}",
-            headers={"ngrok-skip-browser-warning": "true"},
-            timeout=5,
-        )
+        resp = requests.get(f"{SERVER_BASE}/resolve-bssid/{bssid}", timeout=5)
         if resp.status_code == 200:
             data = resp.json()
             if data.get("confirmed"):
-                cache[bssid] = data["building"]
+                cache[bssid] = {"building": data["building"], "fetched_at": time.time()}
                 _save_cache(cache)
                 return data["building"]
+            # Server no longer vouches for it: invalidate our copy.
+            if bssid in cache:
+                del cache[bssid]
+                _save_cache(cache)
+            return None
     except requests.exceptions.RequestException:
-        pass  # offline or server down - fall back silently to manual entry
+        pass  # offline or server down - fall through to a stale entry, if any
 
-    return None
+    entry = cache.get(bssid)
+    if isinstance(entry, dict):
+        return entry.get("building")
+    return entry if isinstance(entry, str) else None
 
 
 def submit_bssid_vote(bssid, building):
     """
-    Sends a (bssid, building) pair to the server as a confirmation vote.
-    Called after a user manually types/confirms their building, so the
-    registry improves over time without ever trusting a single report.
+    Records this contributor's vote that `bssid` is in `building`.
+
+    Only needed when no benchmark is being uploaded (e.g. the passive monitor's
+    one-time building prompt). WhyPhy.py does NOT call this: /log-wifi already
+    records the vote, and calling both used to double-count every run.
+    The server keeps at most one vote per (contributor, BSSID).
     """
     if not bssid:
         return
     try:
         requests.post(
             f"{SERVER_BASE}/vote-bssid",
-            json={"bssid": bssid, "building": building},
-            headers={"ngrok-skip-browser-warning": "true"},
+            json={"bssid": bssid, "building": building,
+                  "contributor_id": contributor.get_contributor_id()},
             timeout=5,
         )
     except requests.exceptions.RequestException:

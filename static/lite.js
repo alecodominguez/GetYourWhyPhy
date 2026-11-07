@@ -6,9 +6,12 @@
  * (the user picks a building) and no raw ICMP: latency, jitter and packet
  * loss are approximated from repeated fetch() round-trips against /ping.
  *
- * Scoring mirrors WhyPhy.py's WEIGHTS/THRESHOLDS/score_metric so a Lite score
- * and a native score mean the same thing. If those constants change in
- * WhyPhy.py, update them here too. This is plain JS rather than compiled
+ * Scoring mirrors scoring.py's WEIGHTS/THRESHOLDS/score_metric for the
+ * on-screen preview. The server recomputes the stored score from the raw
+ * metrics, so if those constants change in scoring.py, the leaderboard stays
+ * correct even before this file is updated. Note that Lite and native scores
+ * are NOT directly comparable (different network path), so the leaderboard
+ * ranks them separately. This is plain JS rather than compiled
  * WebAssembly on purpose: the math is a dozen lines of arithmetic, and a
  * Rust/Emscripten build pipeline would add complexity for no benefit.
  */
@@ -30,6 +33,23 @@ function scoreMetric(value, [lo, hi]) {
     if (hi === lo) return 0;
     const ratio = (value - lo) / (hi - lo);
     return Math.round(clamp(ratio * 100, 0, 100) * 10) / 10;
+}
+
+// Anonymous per-browser contributor ID: random, not derived from anything
+// about the device. Lets the server average per contributor and keeps one
+// browser from dominating a building's average. Falls back to no ID if
+// storage is unavailable (private mode, blocked cookies).
+function getContributorId() {
+    try {
+        let id = localStorage.getItem("whyphy_contributor_id");
+        if (!id) {
+            id = "web-" + crypto.randomUUID().replace(/-/g, "");
+            localStorage.setItem("whyphy_contributor_id", id);
+        }
+        return id;
+    } catch (e) {
+        return null;
+    }
 }
 
 function setProgress(text) {
@@ -128,6 +148,8 @@ async function runLiteTest() {
                 jitter, packet_loss: packetLoss,
                 score: total,
                 source: "web_lite",
+                contributor_id: getContributorId(),
+                client_version: 2,
             }),
         });
 
