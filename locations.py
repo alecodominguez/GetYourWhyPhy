@@ -46,6 +46,7 @@ ALIASES = {
     "north rec": "Student Recreation Center",
     "the union": "Student Union Memorial Center",
     "student unions": "Student Union Memorial Center",
+    "student union": "Student Union Memorial Center",
     "union": "Student Union Memorial Center",
     "sumc": "Student Union Memorial Center",
     "enrb": "DeConcini ENRB",
@@ -95,5 +96,14 @@ def get_standard_name(name):
         clean_building = building.lower().replace(" ", "").replace("-", "").replace(".", "")
         if clean_input == clean_building:
             return building
+    # Fallback: a unique prefix of an official name ("student union" ->
+    # "Student Union Memorial Center"). Only accepted when exactly one
+    # building matches, so short/ambiguous input still gets rejected.
+    if len(clean_input) >= 4:
+        prefix_hits = [b for b in CAMPUS_BUILDINGS
+                       if b.lower().replace(" ", "").replace("-", "").replace(".", "").startswith(clean_input)]
+        if len(prefix_hits) == 1:
+            return prefix_hits[0]
+
     # return None if no match is found (for WhyPhy.py)
     return None
