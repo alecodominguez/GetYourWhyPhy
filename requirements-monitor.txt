@@ -1,0 +1,8 @@
+# Optional extras for passive_monitor.py's tray/menu-bar indicator.
+# Not required to run the monitor - without these, `passive_monitor.py run`
+# falls back to plain console output automatically.
+#
+#   pip install -r requirements-monitor.txt
+#
+pystray==0.19.5
+Pillow==11.0.0
