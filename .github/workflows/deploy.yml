@@ -1,0 +1,65 @@
+# Push-to-deploy for whyphy.app. Replaces the manual steps in docs/UPDATING.md.
+#
+# On every push to main that touches server code, GitHub SSHes into the VPS as
+# the restricted `whyphy` user, pulls, installs requirements, restarts the
+# service (server.py runs migrations.upgrade() on startup, which backs up the
+# DB before changing it), then checks the service and the public site.
+# If any step fails, the run goes red and GitHub emails you.
+#
+# One-time setup: see "Push-to-deploy setup" in docs/UPDATING.md.
+# Repo secrets needed: DEPLOY_HOST, DEPLOY_USER (= whyphy), DEPLOY_SSH_KEY.
+
+name: Deploy to whyphy.app
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "paper/**"
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - ".idea/**"
+  workflow_dispatch: {}   # "Run workflow" button in the Actions tab
+
+concurrency:
+  group: deploy-whyphy
+  cancel-in-progress: false   # never interrupt a deploy halfway
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Pull, install, restart (steps 1-7)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/GetYourWhyPhy
+            echo "== Before: $(git log --oneline -1)"
+            git pull --ff-only origin main
+            echo "== After:  $(git log --oneline -1)"
+            .venv/bin/pip install --quiet -r requirements.txt
+            sudo /usr/bin/systemctl restart whyphy
+            sleep 4
+            if ! systemctl is-active --quiet whyphy; then
+              echo "!! whyphy failed to start. Last 30 log lines:"
+              sudo /usr/bin/journalctl -u whyphy -n 30 --no-pager || true
+              exit 1
+            fi
+            echo "== whyphy is active"
+
+      - name: Check the public site (step 8)
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://whyphy.app/ || true)
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 3
+          done
+          echo "whyphy.app did not return 200 after deploy"
+          exit 1

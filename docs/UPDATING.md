@@ -1,5 +1,41 @@
 # Updating the live server
 
+## Push-to-deploy (normal path)
+Pushing to `main` deploys automatically via `.github/workflows/deploy.yml`:
+pull -> pip install -> restart -> service check -> public site check.
+Watch it under the repo's **Actions** tab; a failed deploy turns red, shows the
+last 30 service log lines, and GitHub emails you. Pushes that only touch
+`paper/`, `docs/`, `*.md` or `.idea/` don't deploy. To redeploy without a new
+commit: Actions -> "Deploy to whyphy.app" -> **Run workflow**.
+
+The manual steps below are the fallback if Actions is down or a deploy fails.
+
+### Push-to-deploy setup (one time)
+On the VPS (as `aleco`):
+```bash
+# 1. whyphy needs a login shell for SSH (service accounts often have nologin)
+getent passwd whyphy                       # last field is the shell
+sudo usermod -s /bin/bash whyphy           # only if it showed nologin/false
+
+# 2. Deploy-only SSH key, authorized for whyphy
+sudo -u whyphy ssh-keygen -t ed25519 -N "" -C github-deploy -f /tmp/deploy_key
+WH=$(getent passwd whyphy | cut -d: -f6)
+sudo -u whyphy mkdir -p "$WH/.ssh" && sudo -u whyphy chmod 700 "$WH/.ssh"
+sudo -u whyphy sh -c "cat /tmp/deploy_key.pub >> $WH/.ssh/authorized_keys && chmod 600 $WH/.ssh/authorized_keys"
+sudo cat /tmp/deploy_key                   # copy ALL of this into DEPLOY_SSH_KEY
+sudo rm /tmp/deploy_key /tmp/deploy_key.pub
+
+# 3. Let whyphy restart the service and read its logs - nothing else
+echo 'whyphy ALL=(root) NOPASSWD: /usr/bin/systemctl restart whyphy, /bin/systemctl restart whyphy, /usr/bin/journalctl -u whyphy -n 30 --no-pager' \
+  | sudo tee /etc/sudoers.d/whyphy-deploy
+sudo chmod 440 /etc/sudoers.d/whyphy-deploy
+sudo visudo -cf /etc/sudoers.d/whyphy-deploy   # must say "parsed OK"
+```
+On GitHub: repo **Settings -> Secrets and variables -> Actions -> New repository secret**:
+`DEPLOY_HOST` = `whyphy.app`, `DEPLOY_USER` = `whyphy`, `DEPLOY_SSH_KEY` = the private key above.
+
+## Manual fallback
+
 After pushing to `main`:
 
 ```bash
